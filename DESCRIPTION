@@ -8,6 +8,6 @@ Description: Used in DDLeslieReconstruct.
 License: GPL 3.0
 Encoding: UTF-8
 LazyData: true
-Imports: Rcpp (>= 1.0.1)
-Depends: RcppArmadillo, Rcpp, coda, svMisc
+Imports: Rcpp (>= 1.0.1), RcppArmadillo, coda, svMisc
+Depends: RcppArmadillo, Rcpp, coda
 LinkingTo: Rcpp, RcppArmadillo, coda, svMisc
