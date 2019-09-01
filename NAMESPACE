@@ -1,7 +1,11 @@
 importFrom(RcppArmadillo)
+import(Rcpp)
+import(coda)
+import(svMisc)
 useDynLib(ReDDLeslie, .registration = TRUE)
 export(DDLislie.sampler)
 export(getLeslie)
 export(ProjectHarvest)
 export(getAerialCount)
+export(eyes)
 

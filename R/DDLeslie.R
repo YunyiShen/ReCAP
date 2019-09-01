@@ -55,8 +55,6 @@ DDLislie.sampler =
         require(coda)
         require(RcppArmadillo)
         require(Rcpp)
-        source('./R/misc.R')
-        sourceCpp('./src/Projections.cpp')
         ## .............. Sampler .............. ##
         ## ..................................... ##
 

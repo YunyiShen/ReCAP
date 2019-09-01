@@ -61,6 +61,11 @@ arma::mat getAerialCount(const arma::mat& Harv, const arma::mat& H, const arma::
 }
 
 ///Misc
-
+//[[Rcpp::export]]
+arma::mat eyes(int n){
+  arma::mat I;
+  I.eye(n,n);
+  return(I);
+}
 
 

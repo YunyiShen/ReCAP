@@ -52,11 +52,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// eyes
+arma::mat eyes(int n);
+RcppExport SEXP _ReDDLeslie_eyes(SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(eyes(n));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ReDDLeslie_getLeslie", (DL_FUNC) &_ReDDLeslie_getLeslie, 3},
     {"_ReDDLeslie_ProjectHarvest", (DL_FUNC) &_ReDDLeslie_ProjectHarvest, 10},
     {"_ReDDLeslie_getAerialCount", (DL_FUNC) &_ReDDLeslie_getAerialCount, 3},
+    {"_ReDDLeslie_eyes", (DL_FUNC) &_ReDDLeslie_eyes, 1},
     {NULL, NULL, 0}
 };
 

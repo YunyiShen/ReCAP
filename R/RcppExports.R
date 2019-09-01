@@ -13,3 +13,7 @@ getAerialCount <- function(Harv, H, A) {
     .Call(`_ReDDLeslie_getAerialCount`, Harv, H, A)
 }
 
+eyes <- function(n) {
+    .Call(`_ReDDLeslie_eyes`, n)
+}
+
