@@ -75,17 +75,17 @@ DDLislie.sampler =
         errs_dim = 0
         cat("  Harvest data:\n")
         errs_dim = errs_dim + Check_data(Harv.data,sum(nage),proj.periods + 1 )
-        cat("  Aerial count data:\n")
+        cat("\n  Aerial count data:\n")
         errs_dim = errs_dim + Check_data(Aerial.data,1,proj.periods + 1)
-        cat("  Fecundity:\n")
+        cat("\n  Fecundity:\n")
         errs_dim = errs_dim + Check_dimensions(mean.f,Assumptions$Fec,nage[1],proj.periods)
-        cat("  Survival:\n")
+        cat("\n  Survival:\n")
         errs_dim = errs_dim + Check_dimensions(mean.s,Assumptions$Surv,sum(nage),proj.periods)
-        cat("  Sex Ratio at Birth (SRB):\n")
+        cat("\n  Sex Ratio at Birth (SRB):\n")
         errs_dim = errs_dim + Check_dimensions(mean.SRB,Assumptions$SRB,1,proj.periods) # no age structure
-        cat("  Harvest rate:\n")
+        cat("\n  Harvest rate:\n")
         errs_dim = errs_dim + Check_dimensions(mean.H,Assumptions$Harv,sum(nage),proj.periods+1)
-        cat("  Aerial detection rate:\n")
+        cat("\n  Aerial detection rate:\n")
         errs_dim = errs_dim + Check_dimensions(mean.A,Assumptions$AerialDet,1,proj.periods+1)  # no age structure, cannot determine
         cat("\n")
 
