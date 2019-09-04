@@ -243,3 +243,9 @@ HarvestSen = function(Fec,Surv,SRB,Harvpar,nage,Harv_assump){
         H_Sen = rowSums( t(Harv_assump) %*% (E_Sen*L)) # sensitivity of harvest
         return(H_Sen)
 }
+
+ProjectHarvest = function(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T){
+	ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
+}
+
+

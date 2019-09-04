@@ -44,7 +44,7 @@ arma::mat ProjectHarvest_helperCpp(const arma::mat& data_n,const arma::mat& Surv
 
 ///main projection function
 //[[Rcpp::export]]
-arma::mat ProjectHarvest(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
+arma::mat ProjectHarvestCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
 	arma::mat Harvest(sum(nage),period+1);
 	Harvest.col(0) = bl;
 	//E0 = E0/(sum(E0));// need to check whether there is one in R call rather than here.

@@ -1,6 +1,6 @@
-\name{rcpp_hello}
-\alias{rcpp_hello}
-\title{Hello, Rcpp!}
+\name{DDLeslie_sampler}
+\alias{DDLeslie_sampler}
+\title{Integrated Population Model for Culling and Aerial Count Data}
 \usage{
 rcpp_hello()
 }

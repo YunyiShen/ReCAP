@@ -19,9 +19,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// ProjectHarvest
-arma::mat ProjectHarvest(const arma::mat& Surv, const arma::mat& Harvpar, const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl, const int& period, const IntegerVector& nage);
-RcppExport SEXP _ReDDLeslie_ProjectHarvest(SEXP SurvSEXP, SEXP HarvparSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP, SEXP blSEXP, SEXP periodSEXP, SEXP nageSEXP) {
+// ProjectHarvestCpp
+arma::mat ProjectHarvestCpp(const arma::mat& Surv, const arma::mat& Harvpar, const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl, const int& period, const IntegerVector& nage);
+RcppExport SEXP _ReDDLeslie_ProjectHarvestCpp(SEXP SurvSEXP, SEXP HarvparSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP, SEXP blSEXP, SEXP periodSEXP, SEXP nageSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -35,7 +35,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type bl(blSEXP);
     Rcpp::traits::input_parameter< const int& >::type period(periodSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type nage(nageSEXP);
-    rcpp_result_gen = Rcpp::wrap(ProjectHarvest(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage));
+    rcpp_result_gen = Rcpp::wrap(ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -66,7 +66,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ReDDLeslie_getLeslie", (DL_FUNC) &_ReDDLeslie_getLeslie, 3},
-    {"_ReDDLeslie_ProjectHarvest", (DL_FUNC) &_ReDDLeslie_ProjectHarvest, 10},
+    {"_ReDDLeslie_ProjectHarvestCpp", (DL_FUNC) &_ReDDLeslie_ProjectHarvestCpp, 10},
     {"_ReDDLeslie_getAerialCount", (DL_FUNC) &_ReDDLeslie_getAerialCount, 3},
     {"_ReDDLeslie_eyes", (DL_FUNC) &_ReDDLeslie_eyes, 1},
     {NULL, NULL, 0}

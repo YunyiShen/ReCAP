@@ -2,11 +2,11 @@
 \alias{eyes}
 \title{Generating identity matrix}
 \usage{
-eyes(n)
+\code{eyes(n)}
 }
 \description{
 Gererate an identity matrix with dimension n.
 }
 \examples{
-eyes(3)
+\code{> eyes(3)}
 }

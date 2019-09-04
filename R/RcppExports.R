@@ -5,8 +5,8 @@ getLeslie <- function(Surv, Fec, SRB) {
     .Call(`_ReDDLeslie_getLeslie`, Surv, Fec, SRB)
 }
 
-ProjectHarvest <- function(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage) {
-    .Call(`_ReDDLeslie_ProjectHarvest`, Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
+ProjectHarvestCpp <- function(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage) {
+    .Call(`_ReDDLeslie_ProjectHarvestCpp`, Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
 }
 
 getAerialCount <- function(Harv, H, A) {
