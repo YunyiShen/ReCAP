@@ -1,7 +1,7 @@
 ### --------------------------- SAMPLER --------------------------- ###
 ### --------------------------------------------------------------- ### hardest part is coming
 
-DDLislie.sampler =
+DDLeslie_sampler =
         function(#.. number of iterations and burn-in (not saved)
 						              Harv.data
                          , Aerial.data
