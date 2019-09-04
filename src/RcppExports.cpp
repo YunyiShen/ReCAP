@@ -53,12 +53,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // eyes
-arma::mat eyes(int n);
+arma::mat eyes(const int& n);
 RcppExport SEXP _ReDDLeslie_eyes(SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const int& >::type n(nSEXP);
     rcpp_result_gen = Rcpp::wrap(eyes(n));
     return rcpp_result_gen;
 END_RCPP

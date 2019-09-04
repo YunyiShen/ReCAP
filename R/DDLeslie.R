@@ -3,34 +3,34 @@
 
 DDLislie.sampler =
         function(#.. number of iterations and burn-in (not saved)
-                         n.iter, burn.in = 0, thin.by = 1
-
-                         #.. fixed variance hyper-parameters
-                         ,al.f = 1, be.f = 0.0109, al.s = 1, be.s = 0.0109,al.SRB = 1,be.SRB = 0.0109
-                         , al.aK0 , be.aK0
-                         , al.H = 1, be.H = 0.0436, al.A = 1, be.A = 0.0436
+						              Harv.data
+                         , Aerial.data
+                         , nage
 
                          #.. fixed prior means
-                         , mean.f, mean.s, mean.SRB, mean.b, mean.H, mean.A
-                         , Assumptions
+                         , mean.f, mean.s, mean.SRB, mean.H, mean.A
+                         , mean.b=Harv.data[,1]
+
+                         ,n.iter=50000, burn.in = 5000, thin.by = 10
+
+                         #.. fixed variance hyper-parameters
+                         ,al.f = 1, be.f = 0.05, al.s = 1, be.s = 0.1,al.SRB = 1,be.SRB = 0.05
+                         , al.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
+                         , be.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
+                         , al.H = 1, be.H = 0.05, al.A = 1, be.A = 0.05
+                         #.. census data
+                         #     *not transformed coming in*
+                         , Assumptions = list()
 
                          #.. inital values for vitals and variances
                          #     *vitals not transformed coming in* all not transfer, will transfer later before sample and transfer back when saving
-                         ,start.f = mean.f, start.s = mean.s, start.SRB = mean.SRB
-                         ,start.b = mean.b, start.aK0 = al.aK0, start.H = mean.H
-                         ,start.A = mean.A
-                         ,start.sigmasq.f = 5, start.sigmasq.s = 5, start.sigmasq.SRB = 5
-                         #,start.sigmasq.aK0 = 5
-                         , start.sigmasq.H = 5
-                         ,start.sigmasq.A = 5
+                         , start.sigmasq.f = .05, start.sigmasq.s = .05, start.sigmasq.SRB = .05
+                         , start.sigmasq.H = .05
+                         , start.sigmasq.A = .05
 
-                         #.. census data
-                         #     *not transformed coming in*
-                         ,Harv.data
-                         ,Aerial.data
                          #.. **variances** for proposal distributions used in M-H
                          #     steps which update vital rates.
-                         ,prop.vars # col names should be as follow:
+                         ,prop.vars = list() # col names should be as follow:
                                      # "fert.rate", "surv.prop", "SRB","H", "A","aK0"
                                      # ,"baseline.count"
 
@@ -39,7 +39,7 @@ DDLislie.sampler =
                          ,proj.periods = (ncol(Harv.data)-1)
 
                          #.. age group, if multiple sex, the one reproduce should be at first.
-                         ,nage = matrix(c(8,3))
+
 
                          ,estFer=T, Fec=rep(1,nage), estaK0 = F
                          ,aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage)),1,matrix(0,1,1)), global = T, null = T
@@ -55,23 +55,51 @@ DDLislie.sampler =
         require(coda)
         require(RcppArmadillo)
         require(Rcpp)
+
         ## .............. Sampler .............. ##
         ## ..................................... ##
+        ## -------- Checking input dimensions ------- ##
+		mean.f = as.matrix( mean.f)
+	    mean.s = as.matrix( mean.s)
+		mean.SRB = as.matrix( mean.SRB)
+        mean.b = as.matrix( mean.b)
+		mean.H = as.matrix( mean.H)
+        mean.A = as.matrix( mean.A)
+		Harv.data = as.matrix(Harv.data)
+		Aerial.data = as.matrix(Aerial.data)
 
-       # mean.aK0 = (mean.aK0)
+        cat("Checking input dimensions...\n")
+
+        Assumptions = Check_assumptions(Assumptions, nage, proj.periods)
+        prop.vars = Check_prop_var(prop.vars,nage,proj.periods)
+        errs_dim = 0
+        cat("  Harvest data:\n")
+        errs_dim = errs_dim + Check_data(Harv.data,sum(nage),proj.periods + 1 )
+        cat("  Aerial count data:\n")
+        errs_dim = errs_dim + Check_data(Aerial.data,1,proj.periods + 1)
+        cat("  Fecundity:\n")
+        errs_dim = errs_dim + Check_dimensions(mean.f,Assumptions$Fec,nage[1],proj.periods)
+        cat("  Survival:\n")
+        errs_dim = errs_dim + Check_dimensions(mean.s,Assumptions$Surv,sum(nage),proj.periods)
+        cat("  Sex Ratio at Birth (SRB):\n")
+        errs_dim = errs_dim + Check_dimensions(mean.SRB,Assumptions$SRB,1,proj.periods) # no age structure
+        cat("  Harvest rate:\n")
+        errs_dim = errs_dim + Check_dimensions(mean.H,Assumptions$Harv,sum(nage),proj.periods+1)
+        cat("  Aerial detection rate:\n")
+        errs_dim = errs_dim + Check_dimensions(mean.A,Assumptions$AerialDet,1,proj.periods+1)  # no age structure, cannot determine
+        cat("\n")
+
+
+        if(errs_dim>0) stop(paste(errs_dim,"error(s) in input dimension, see massage above.\n"))
         ## -------- Begin timing ------- ##
-
+		cat("\n")
         ptm = proc.time()
+
 
         # ## ------- Determine fert.rows --------- ##
 
         zero.elements = mean.f == 0
         fert.rows = as.logical(apply(zero.elements, 1, function(z) !all(z)))
-
-        # ## ------- Type of migration data ------- ##
-
-        # ## No reason for this anymore; remove later
-        # mig.string = "prop"
 
 
         ## ---------- Storage ---------- ##
@@ -89,7 +117,14 @@ DDLislie.sampler =
         # _____________________________________________________
 
         ## How many (samples) stored?
-        cat("Allocating for RAMs...\n")
+        cat("Preparing...")
+		start.f = mean.f
+	    start.s = mean.s
+		start.SRB = mean.SRB
+        start.b = mean.b
+		start.aK0 = al.aK0
+		start.H = mean.H
+        start.A = mean.A
         n.stored = ceiling(n.iter / thin.by)
         #ntimes = (!homo) * ncol(start.s) + (homo) # whether assume time homogeneous of survival etc, will influence ncol of the mcmc object
             # Fertility
@@ -279,7 +314,7 @@ DDLislie.sampler =
         s.out.tol = matrix(0, nrow = nrow(mean.s), ncol = ncol(mean.s)
                                                 ,dimnames = dimnames(mean.s))
 
-
+        cat("done\n")
         ## -------- Initialize -------- ## Restart here in 10/19/2018
         cat("Initializing...")
         #.. Set current vitals and variances to inital values

@@ -1,6 +1,69 @@
-########
-### ----------------------- HELPER FUNCTIONS ---------------------- ###
-### --------------------------------------------------------------- ###
+
+Check_assumptions = function(Assumptions, nage, proj.period){
+	if(is.null(Assumptions$Fec)) Assumptions$Fec = list(time = eyes(proj.period),age = as.matrix(eyes(nage[1])))
+	if(is.null(Assumptions$Surv)) Assumptions$Surv = list(time = eyes(proj.period),age = as.matrix(eyes(sum(nage))))
+	if(is.null(Assumptions$SRB)) Assumptions$SRB = list(time = eyes(proj.period),age = eyes(1))
+	if(is.null(Assumptions$AerialDet)) Assumptions$AerialDet  = list(time = eyes(proj.period+1),age = eyes(1))
+	if(is.null(Assumptions$Harv)) Assumptions$Harv = list(time = eyes(proj.period+1),age = eyes(sum(nage)))
+	if(is.null(Assumptions$aK0)) Assumptions$aK0 = list(eyes(nage[1]),eyes(sum(nage)),eyes(1))
+
+	return(Assumptions)
+
+}
+
+Check_prop_var = function(prop.var,nage,proj.period){
+	if(is.null(prop.var$fert.rate)) prop.var$fert.rate = matrix(1,nrow = nage[1],ncol = proj.period)
+	if(is.null(prop.var$surv.prop)) prop.var$surv.prop = matrix(1,nrow = sum(nage),ncol = proj.period)
+	if(is.null(prop.var$SRB)) prop.var$SRB = matrix(.1,nage[1],proj.period)
+	if(is.null(prop.var$A)) prop.var$A = matrix(1,1,proj.period+1)
+	if(is.null(prop.var$H)) prop.var$H = matrix(1,sum(nage),proj.period+1)
+	if(is.null(prop.var$aK0)) prop.var$aK0 = list(5e-8,5e-8,50)
+	if(is.null(prop.var$baseline.pop.count)) prop.var$baseline.pop.count = matrix(1,nrow = sum(nage),ncol = 1)
+	return(prop.var)
+}
+
+Check_dimensions = function(mean_vital,Assumption,nage,period_used){
+	errs = 0
+	assu_time = Assumption$time
+	assu_age = Assumption$age
+	if(nrow(assu_age)!=nage){
+		cat("    Age assumption matrix must have row number same to number of age classes considered\n")
+		errs = errs + 1
+	}
+
+	if(ncol(assu_time) != period_used){
+		cat("    Time assumption matrix must have column number same to number of periods considered\n")
+		errs = errs + 1
+	}
+
+	if(ncol(assu_age) != nrow(mean_vital)){
+		cat("    Incompatable age assumption matrix, if you did not specify the assumption matrix, check the prior mean matrix\n")
+		errs = errs + 1
+	}
+
+	if(nrow(assu_time) != ncol(mean_vital)){
+		cat("    Incompatable age assumption matrix, if you did not specify the assumption matrix, check the prior mean matrix\n")
+		errs = errs + 1
+	}
+	if(errs==0) cat("    all clear\n")
+
+	return(errs)
+}
+
+Check_data = function(data_in,nage,nperiod){
+	errs = 0
+	if(nrow(data_in)!=nage){
+		cat("    Row number of data does not match age classes\n")
+		errs = errs + 1
+	}
+	if(ncol(data_in)!=nperiod){
+		cat("    Column number of data does not match period of measurements\n")
+		errs = errs + 1
+	}
+	if(errs==0) cat("    all clear\n")
+	return(errs)
+}
+
 
 ########
 # Coming functions are
@@ -11,7 +74,7 @@
 
 logitf = function(p){
     log(p / (1 - p))
- } # checked 10/24/2018 
+ } # checked 10/24/2018
 
 ## eyes function in matlab
 eyes = function(n){
@@ -20,7 +83,7 @@ eyes = function(n){
         return(re)
 }
 
-## logit function    
+## logit function
 invlogit = function(x){
         if(any(is.infinite(exp(x)))) {
                 y = x
@@ -30,7 +93,7 @@ invlogit = function(x){
                 return(y)
         }
         else return(exp(x) / (1 + exp(x)))
-} # checked 10/24/2018 
+} # checked 10/24/2018
 
 ##--- Generates random draws from inverse gamma ---##
 rinvGamma = function(n, shape, scale){
@@ -44,6 +107,7 @@ dinvGamma = function(x, shape, scale, log = FALSE){
         else d = scale^shape / gamma(shape) * (1/x)^(shape + 1) * exp(-scale/x)
         return(d)
 } # checked 10/24/2018
+
 
 ## ............. Likelihood ............ ##
 ## ..................................... ##
@@ -86,7 +150,7 @@ log.post = function(## estimated vitals
         ##         in, s, prior.mean.s is logit transformed coming in, g and
         ##         prior.mean.g are not transformed coming in.
         ##-- prior for f and baseline K0 if needed to be estimatedd --##
-        
+
         if(estFer){
             log.f.prior = dnorm(as.vector(f[non.zero.fert,])
                                 , mean = as.vector(prior.mean.f[non.zero.fert,])
@@ -99,15 +163,15 @@ log.post = function(## estimated vitals
             log.f.prior = 0
             log.sigmasq.f.prior = 0
         }
-        
+
         if(estaK0){
             log.aK0.prior =#sum( dunif(aK0[[1]],alpha.aK0[[1]],beta.aK0[[1]],T) , dunif(aK0[[2]],alpha.aK0[[2]],beta.aK0[[2]],T))
-                Reduce(sum, 
+                Reduce(sum,
                        lapply(1:length(aK0),
                               function(i,aK0,al.aK0,be.aK0){
                                   dunif(aK0[[i]],al.aK0[[i]],be.aK0[[i]],T)}
                               ,aK0,alpha.aK0,beta.aK0))
-            
+
         }
         else {
             log.aK0.prior = 0
@@ -133,14 +197,14 @@ log.post = function(## estimated vitals
                 log(dinvGamma(sigmasq.A, alpha.A, beta.A))
         log.sigmasq.H.prior =
                 log(dinvGamma(sigmasq.H, alpha.H, beta.H))
-        
+
         ##-- The log posterior is the SUM of these with the log.like --##
 
     return(sum(log.f.prior, log.s.prior, log.SRB.prior#, log.b.prior
     , log.aK0.prior, log.H.prior,log.A.prior,
                              log.sigmasq.f.prior
                              ,log.sigmasq.s.prior
-                             ,log.sigmasq.SRB.prior                             
+                             ,log.sigmasq.SRB.prior
                              #,log.sigmasq.aK0.prior
                              ,log.sigmasq.H.prior
                              ,log.sigmasq.A.prior
@@ -152,20 +216,20 @@ log.post = function(## estimated vitals
 ## ..................................... ##
 acc.ra = function(log.prop, log.current){
         min(1, exp(log.prop - log.current))
-} 
+}
 
 acc.ra.var = function(log.prop.post, log.curr.post, log.prop.var, log.curr.var){
         min(1, exp(log.curr.var + log.prop.post - log.prop.var - log.curr.post))
-} 
+}
 
 ## sensitivity analysis
 HarvestSen = function(Fec,Surv,SRB,Harvpar,nage,Harv_assump){
         L = getLeslie(Surv,Fec,SRB) # intrinsic growth
         H = matrix(0,sum(nage),sum(nage))
         diag(H) = Harv_assump %*% Harvpar # propotional harvest
-        
+
         EL = H %*% L # effactive growth
-        
+
         ev = eigen(EL)
         lmax = which(Re(ev$values) == max(Re(ev$values)))
         lambda = Re(ev$values[lmax])
@@ -174,8 +238,8 @@ HarvestSen = function(Fec,Surv,SRB,Harvpar,nage,Harv_assump){
         V = Conj(solve(W))
         v = abs(Re(V[lmax, ]))
         E_Sen = v %o% w # sensitivity analysis of the effective growth
-        
+
         # apply chain rule:
         H_Sen = rowSums( t(Harv_assump) %*% (E_Sen*L)) # sensitivity of harvest
         return(H_Sen)
-} 
+}
