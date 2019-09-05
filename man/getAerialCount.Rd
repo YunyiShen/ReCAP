@@ -48,6 +48,7 @@ Harv <- matrix(rpois(15,10),3,5) # 3 age and 5 years
 H <- matrix(runif(15),3,5)
 A <- matrix(runif(5),1,5) # 5 years
 getAerialCount(Harv,H,A)
+}
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{AerialCount }% use one of  RShowDoc("KEYWORDS")

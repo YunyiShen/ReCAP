@@ -15,8 +15,8 @@ DDLeslie_sampler =
 
                          #.. fixed variance hyper-parameters
                          ,al.f = 1, be.f = 0.05, al.s = 1, be.s = 0.1,al.SRB = 1,be.SRB = 0.05
-                         , al.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
-                         , be.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
+                         , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
+                         , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
                          , al.H = 1, be.H = 0.05, al.A = 1, be.A = 0.05
                          #.. census data
                          #     *not transformed coming in*
@@ -41,7 +41,7 @@ DDLeslie_sampler =
                          #.. age group, if multiple sex, the one reproduce should be at first.
 
 
-                         ,estFer=T, Fec=rep(1,nage), estaK0 = F
+                         ,estFec=T, Fec=rep(1,nage), estaK0 = F
                          ,aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T
                          # control parameters for the model, global is whether density dependency is global rather than age specific, null is whether exist density dependency (True of not ).
                           # whether assume time homogeneous of everything, currently homo=T is not stable
@@ -122,14 +122,14 @@ DDLeslie_sampler =
 	    start.s = mean.s
 		start.SRB = mean.SRB
         start.b = mean.b
-		start.aK0 = al.aK0
+		start.aK0 = min.aK0
 		start.H = mean.H
         start.A = mean.A
         n.stored = ceiling(n.iter / thin.by)
         #ntimes = (!homo) * ncol(start.s) + (homo) # whether assume time homogeneous of survival etc, will influence ncol of the mcmc object
             # Fertility
 
-            if(estFer){
+            if(estFec){
             fert.rate.mcmc =
                     mcmc(matrix(nrow = n.stored
                              ,ncol = length(start.f))
@@ -319,14 +319,14 @@ DDLeslie_sampler =
         cat("Initializing...")
         #.. Set current vitals and variances to inital values
         #     Take logs/logits here where required
-        if(estFer){
+        if(estFec){
             log.curr.f = log(start.f)    #=- log(0) stored as "-Inf". Gets
             log.prop.f = log(start.f)    #        converted to 0 under exponentiation
 
         }
         else{
-            log.curr.f =    (!estFer)*log(start.f) #=- log(0) stored as "-Inf". Gets
-            log.prop.f =    (!estFer)*log(start.f) #        converted to 0 under exponentiation
+            log.curr.f =    (!estFec)*log(start.f) #=- log(0) stored as "-Inf". Gets
+            log.prop.f =    (!estFec)*log(start.f) #        converted to 0 under exponentiation
         }
         logit.curr.s = logitf(start.s)
         logit.curr.SRB = logitf(start.SRB)
@@ -400,7 +400,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -413,7 +413,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -460,7 +460,7 @@ DDLeslie_sampler =
 
 
             ## -------- Vital Rate M-H Steps ------- ##
-        if(estFer){
+        if(estFec){
             ##...... Fertility .....##
 
             if(verb && identical(i%%1000, 0)) cat("\n", i, " Fertility")
@@ -519,7 +519,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -532,7 +532,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
@@ -655,7 +655,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -668,7 +668,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -799,7 +799,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -812,7 +812,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -926,7 +926,7 @@ DDLeslie_sampler =
                                              ,H = logit.prop.H #=- use proposal
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -939,7 +939,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1048,7 +1048,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1061,7 +1061,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1159,7 +1159,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = prop.aK0 #=- use proposal
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1172,7 +1172,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1286,7 +1286,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.prop.b ) #=- use proposal
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1299,7 +1299,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1361,7 +1361,7 @@ DDLeslie_sampler =
             if(verb && identical(i%%1000, 0)) cat("\n", i, " Variances")
 
             ##...... Fertility rate ......##
-        if(estFer){ # if not est Fer, this is not needed
+        if(estFec){ # if not est Fer, this is not needed
             prop.sigmasq.f =
                 rinvGamma(1, al.f +
                                                  length(mean.f[fert.rows,])/2,
@@ -1379,7 +1379,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1392,7 +1392,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = prop.sigmasq.f #=- use proposal
@@ -1464,7 +1464,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1477,7 +1477,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1550,7 +1550,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1563,7 +1563,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1635,7 +1635,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1648,7 +1648,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1720,7 +1720,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFer=estFer, estaK0=estaK0
+                                             ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1733,7 +1733,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = al.aK0, beta.aK0 = be.aK0
+                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1856,7 +1856,7 @@ DDLeslie_sampler =
 
 	}
 	else {mean.vital$invK0.mcmc = c(0,0)}
-    if(estFer){
+    if(estFec){
 		mcmc.objs$fert.rate.mcmc = fert.rate.mcmc
 		mean.vital$fert.rate.mcmc = apply( as.matrix( fert.rate.mcmc),2,point.est)
     }
@@ -1949,8 +1949,8 @@ DDLeslie_sampler =
                                                  ,beta.aerial.det = be.A
                                                  ,alpha.Harvest = al.H
                                                  ,beta.Hervest = be.H
-                                                 ,alpha.1overK = al.aK0
-                                                 ,beta.1overK = be.aK0
+                                                 ,alpha.1overK = min.aK0
+                                                 ,beta.1overK = max.aK0
 
                                                  ,mean.fert.rate = mean.f
                                                  ,mean.surv.prop = mean.s

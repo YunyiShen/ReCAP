@@ -126,7 +126,7 @@ log.lhood =function(n.census, n.hat){
 
 log.post = function(## estimated vitals
                     f, s, SRB,baseline.n, aK0, A, H # A for Aerial count detection probability
-                    , estFer, estaK0
+                    , estFec, estaK0
                     ## fixed prior means on vitals
                     , prior.mean.f, prior.mean.s, prior.mean.SRB
                     , prior.mean.b #, prior.mean.aK0
@@ -151,7 +151,7 @@ log.post = function(## estimated vitals
         ##         prior.mean.g are not transformed coming in.
         ##-- prior for f and baseline K0 if needed to be estimatedd --##
 
-        if(estFer){
+        if(estFec){
             log.f.prior = dnorm(as.vector(f[non.zero.fert,])
                                 , mean = as.vector(prior.mean.f[non.zero.fert,])
                                 , sd = sqrt(sigmasq.f)
