@@ -133,7 +133,7 @@ log.post = function(## estimated vitals
                     , prior.mean.A, prior.mean.H
                     ## fixed prior parameters on variance distns
                     , alpha.f, beta.f, alpha.s, beta.s, alpha.SRB, beta.SRB
-                    , alpha.aK0, beta.aK0
+                    , min.aK0, max.aK0
                     , alpha.A, beta.A, alpha.H, beta.H
                     ## updated variances on prior distns
                     , sigmasq.f, sigmasq.s, sigmasq.SRB,sigmasq.n#, sigmasq.aK0
@@ -165,12 +165,12 @@ log.post = function(## estimated vitals
         }
 
         if(estaK0){
-            log.aK0.prior =#sum( dunif(aK0[[1]],alpha.aK0[[1]],beta.aK0[[1]],T) , dunif(aK0[[2]],alpha.aK0[[2]],beta.aK0[[2]],T))
+            log.aK0.prior =#sum( dunif(aK0[[1]],min.aK0[[1]],max.aK0[[1]],T) , dunif(aK0[[2]],min.aK0[[2]],max.aK0[[2]],T))
                 Reduce(sum,
                        lapply(1:length(aK0),
                               function(i,aK0,al.aK0,be.aK0){
                                   dunif(aK0[[i]],al.aK0[[i]],be.aK0[[i]],T)}
-                              ,aK0,alpha.aK0,beta.aK0))
+                              ,aK0,min.aK0,max.aK0))
 
         }
         else {

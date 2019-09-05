@@ -413,7 +413,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -532,7 +532,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
@@ -668,7 +668,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -812,7 +812,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -939,7 +939,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1061,7 +1061,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1172,7 +1172,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1299,7 +1299,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1392,7 +1392,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = prop.sigmasq.f #=- use proposal
@@ -1477,7 +1477,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1563,7 +1563,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1648,7 +1648,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
@@ -1733,7 +1733,7 @@ DDLeslie_sampler =
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
                                              ,alpha.A = al.A, beta.A = be.A
                                              ,alpha.H = al.H, beta.H = be.H
-                                             ,alpha.aK0 = min.aK0, beta.aK0 = max.aK0
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
