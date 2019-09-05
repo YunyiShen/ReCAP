@@ -41,7 +41,7 @@ DDLeslie_sampler =
                          #.. age group, if multiple sex, the one reproduce should be at first.
 
 
-                         ,estFec=T, Fec=rep(1,nage), estaK0 = F
+                         ,estFec=T, estaK0 = F
                          ,aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T
                          # control parameters for the model, global is whether density dependency is global rather than age specific, null is whether exist density dependency (True of not ).
                           # whether assume time homogeneous of everything, currently homo=T is not stable

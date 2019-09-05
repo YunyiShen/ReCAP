@@ -8,7 +8,12 @@ Integrated Population Model for Harvesting and Aerial Counting data under Baysia
 Main sampler of the posterior distribution of vital rates and harvest count in \code{ReDDLeslie}.
 }
 \usage{
-DDLeslie_sampler(Harv.data, Aerial.data, nage, mean.f, mean.s, mean.SRB, mean.H, mean.A, mean.b = Harv.data[, 1], n.iter = 50000, burn.in = 5000, thin.by = 10, al.f = 1, be.f = 0.05, al.s = 1, be.s = 0.1, al.SRB = 1, be.SRB = 0.05, min.aK0 = list(matrix(-0.001, nage[1], 1), matrix(-0.001, sum(nage), 1), 0), max.aK0 = list(matrix(0.001, nage[1], 1), matrix(0.001, sum(nage), 1), 500), al.H = 1, be.H = 0.05, al.A = 1, be.A = 0.05, Assumptions = list(), start.sigmasq.f = 0.05, start.sigmasq.s = 0.05, start.sigmasq.SRB = 0.05, start.sigmasq.H = 0.05, start.sigmasq.A = 0.05, prop.vars = list(), proj.periods = (ncol(Harv.data) - 1), estFec = T, Fec = rep(1, nage), estaK0 = F, aK0 = list(matrix(0, nage[1], 1), matrix(0, sum(nage), 1), matrix(0, 1, 1)), global = T, null = T, point.est = mean, verb = FALSE, s.tol = 10^(-10))
+DDLeslie_sampler(Harv.data, Aerial.data, nage, mean.f, mean.s, mean.SRB, mean.H, mean.A, mean.b = Harv.data[, 1], n.iter = 50000, burn.in = 5000, thin.by = 10
+, al.f = 1, be.f = 0.05, al.s = 1, be.s = 0.1, al.SRB = 1, be.SRB = 0.05, min.aK0 = list(matrix(-0.001, nage[1], 1), matrix(-0.001, sum(nage), 1), 0), max.aK0 = list(matrix(0.001, nage[1], 1), matrix(0.001, sum(nage), 1), 500), al.H = 1, be.H = 0.05, al.A = 1, be.A = 0.05
+, Assumptions = list()
+, start.sigmasq.f = 0.05, start.sigmasq.s = 0.05, start.sigmasq.SRB = 0.05, start.sigmasq.H = 0.05, start.sigmasq.A = 0.05
+, prop.vars = list()
+, proj.periods = (ncol(Harv.data) - 1), estFec = T, estaK0 = F, aK0 = list(matrix(0, nage[1], 1), matrix(0, sum(nage), 1), matrix(0, 1, 1)), global = T, null = T, point.est = mean, verb = FALSE, s.tol = 10^(-10))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -110,9 +115,6 @@ DDLeslie_sampler(Harv.data, Aerial.data, nage, mean.f, mean.s, mean.SRB, mean.H,
 }
   \item{estFec}{
 %%     ~~Describe \code{estFer} here~~
-}
-  \item{Fec}{
-%%     ~~Describe \code{Fec} here~~
 }
   \item{estaK0}{
 %%     ~~Describe \code{estaK0} here~~
