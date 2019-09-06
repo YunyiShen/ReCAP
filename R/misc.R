@@ -76,12 +76,6 @@ logitf = function(p){
     log(p / (1 - p))
  } # checked 10/24/2018
 
-## eyes function in matlab
-eyes = function(n){
-        re = matrix(0,n,n)
-        diag(re) = 1
-        return(re)
-}
 
 ## logit function
 invlogit = function(x){

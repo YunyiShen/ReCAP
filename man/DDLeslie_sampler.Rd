@@ -31,128 +31,143 @@ DDLeslie_sampler(Harv.data, Aerial.data
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{Harv.data}{
-%%     ~~Describe \code{Harv.data} here~~
+Harvest data, rows to be age classes and columns for years.
 }
   \item{Aerial.data}{
-%%     ~~Describe \code{Aerial.data} here~~
+Aerial count data, should be only one row and same number of columns with harvest.
 }
   \item{nage}{
-%%     ~~Describe \code{nage} here~~
+Number of age classes, female first.
 }
   \item{mean.f}{
-%%     ~~Describe \code{mean.f} here~~
+Best estimation of fecundity. Number of rows and columns should be less than harvest, after multiply by Assumptions matrices (see \code{Assumptions}), a full fecundity matrix (i.e. assign fecundity for each age class in each projection year) should have one column less and same number of rows with harvest data(one less year interval). Default input (i.e. no specific Assumptions matrix) should be a full fecundity matrix by itself, i.e.:
+
+\code{nrow(mean.f) == nrow(Harv.data) & ncol(mean.f)==ncol(Harv.data)-1}.
 }
   \item{mean.s}{
-%%     ~~Describe \code{mean.s} here~~
+Samilar to mean.f, for survival.
 }
   \item{mean.SRB}{
-%%     ~~Describe \code{mean.SRB} here~~
+Similar to mean.f, sex ratio at birth, but note SRB is assumed having no age structure. Thus a full SRB matrix should only have one row.
 }
   \item{mean.H}{
-%%     ~~Describe \code{mean.H} here~~
+Similar to fecundity, for harvest rate. Difference is since we assume a pre-repoduction harvest, a full harvest rate matrix should have same size of harvest data.
 }
   \item{mean.A}{
-%%     ~~Describe \code{mean.A} here~~
+Similar to H, Aerial count detection rate. By default, a full aerial count matrix should have same size as aerial count data.
 }
   \item{mean.b}{
-%%     ~~Describe \code{mean.b} here~~
+Best estimation of baseline harvest, usually just firest year's harvest count.
 }
   \item{n.iter}{
-%%     ~~Describe \code{n.iter} here~~
+Number of posterior sample saved.
 }
   \item{burn.in}{
-%%     ~~Describe \code{burn.in} here~~
+Burn in iteration.
 }
   \item{thin.by}{
-%%     ~~Describe \code{thin.by} here~~
+Sample thined by?
 }
   \item{al.f}{
-%%     ~~Describe \code{al.f} here~~
+Hyperparameter for prior distribution of fecundity's variance. Variance of vital rates v beside aK0 follow inverse Gamma distribution with parameter al.v and be.v, v can be fecundity, survival, harvest rate, aerial count detection rate and SRB.
 }
   \item{be.f}{
-%%     ~~Describe \code{be.f} here~~
+Hyperparameter for fecundity.
 }
   \item{al.s}{
-%%     ~~Describe \code{al.s} here~~
+Similar to al.f, for survival.
 }
   \item{be.s}{
-%%     ~~Describe \code{be.s} here~~
+Similar to be.f, for srvival.
 }
   \item{al.SRB}{
-%%     ~~Describe \code{al.SRB} here~~
+Similar, for SRB.
 }
   \item{be.SRB}{
-%%     ~~Describe \code{be.SRB} here~~
+Similar, for SRB.
 }
   \item{min.aK0}{
-%%     ~~Describe \code{min.aK0} here~~
+Prior distribution of aK0s. If fit density dependent Leslie matrix model:
+
+fecundity(Population) = (1 - aK0 [[1]] * (Population - aK0[[3]])) * Fec
+
+survival(Population) = (1 - aK0[[2]] * (Population - aK0[[3]])) * Surv
+In which fecundity is a function of population and Fec and Surv is fecundity and survival at population aK0[[3]]
+
+aK0's component were assumed to be uniformly distributed with parameter min.aK0 and max.aK0.
 }
   \item{max.aK0}{
-%%     ~~Describe \code{max.aK0} here~~
+Prior distribution of aK0s.
 }
   \item{al.H}{
-%%     ~~Describe \code{al.H} here~~
+Similar to al.f, for harvest rate.
 }
   \item{be.H}{
-%%     ~~Describe \code{be.H} here~~
+Similar to be.f, for harvest rate.
 }
   \item{al.A}{
-%%     ~~Describe \code{al.A} here~~
+Similar, for aerial count detection rate
 }
   \item{be.A}{
-%%     ~~Describe \code{be.A} here~~
+Similar, for aerial count detection rate
 }
   \item{Assumptions}{
-%%     ~~Describe \code{Assumptions} here~~
+Should be a list, each element is a list and named Fec, Surv, SRB, Harv, AerialDet, aK0 for fecundity, Survival, SRB, Harvest rate, Aerial count detection rate, and linear coeffient of Density Dependency.
+
+In each list, there should be two matrices, naming \code{age} and \code{time}. In sampler function, a full vital rate matrix (i.e. assign vital rates for each age class in each year needed, for repoduction related, will be one year less than harvest and aerial count related viral rates) used in projection will be produced by matrix multiplication, e.g.
+
+\code{Fec_full <- Assumptions$Fec$age \%*\% mean.f \%*\% Assumptions$Fec$time}
+
+By default, all Assumptions are identity matrices, i.e. prior mean vital rates matrices should be a full one by itself.
 }
   \item{start.sigmasq.f}{
-%%     ~~Describe \code{start.sigmasq.f} here~~
+Starting value of fecundity's variance.
 }
   \item{start.sigmasq.s}{
-%%     ~~Describe \code{start.sigmasq.s} here~~
+Starting value of survival's variance.
 }
   \item{start.sigmasq.SRB}{
-%%     ~~Describe \code{start.sigmasq.SRB} here~~
+Starting value of SRB's variance.
 }
   \item{start.sigmasq.H}{
-%%     ~~Describe \code{start.sigmasq.H} here~~
+Starting value of harvest rate's variance.
 }
   \item{start.sigmasq.A}{
-%%     ~~Describe \code{start.sigmasq.A} here~~
+Starting value of aerial count detection rate's variance.
 }
   \item{prop.vars}{
-%%     ~~Describe \code{prop.vars} here~~
+Proposal variance, should be a list named fert.rate, surv.prop, SRB, A,H, aK0, and baseline.pop.count, same dimension with mean.f, mean.s, mean.SRB, mean.A, mean.H, min.aK0, mean.b.
 }
   \item{proj.periods}{
-%%     ~~Describe \code{proj.periods} here~~
+How many years need to be projected? Usually ncol(Harv.data)-1
 }
   \item{estFec}{
-%%     ~~Describe \code{estFer} here~~
+Estimate fecundity? Bool. If not, mean.f will be used.
 }
   \item{estaK0}{
-%%     ~~Describe \code{estaK0} here~~
+Estimate density dependency parameters? Bool. Note this will be masked if set null=TRUE.
 }
   \item{aK0}{
-%%     ~~Describe \code{aK0} here~~
+If not estimate aK0, what aK0 is.
 }
   \item{global}{
-%%     ~~Describe \code{global} here~~
+Whether aK0[[3]] is global or age specific (i.e. will there be age specific carrying capcacity). Bool.
 }
   \item{null}{
-%%     ~~Describe \code{null} here~~
+Null model for density dependency? Bool. If null=TRUE, no density dependency will be considered, but model can fit time inhomogeneous vital rates.
 }
   \item{point.est}{
-%%     ~~Describe \code{point.est} here~~
+How to do point estimation? Can be mean or median.
 }
   \item{verb}{
-%%     ~~Describe \code{verb} here~~
+Want a verbose run? Bool
 }
   \item{s.tol}{
-%%     ~~Describe \code{s.tol} here~~
+Tolerant for lowest survival rate (below will be considered as 0).
 }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+Do not use Assumptions unless you understand it.
 }
 \value{
 %%  ~Describe the value returned
@@ -177,12 +192,13 @@ DDLeslie_sampler(Harv.data, Aerial.data
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
+##Use our Chicago Deer data.
+set.seed(42)
+DDLeslie_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
+    ,ChicagoDeerdata$nage,ChicagoDeerdata$mean.f,ChicagoDeerdata$mean.s
+    ,ChicagoDeerdata$mean.SRB,ChicagoDeerdata$mean.H,ChicagoDeerdata$mean.A
+    ,n.iter = 50,burn.in = 50,thin.by = 1
+    ,Assumptions = ChicagoDeerdata$Assumptions)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
-\keyword{ ~kwd1 }% use one of  RShowDoc("KEYWORDS")
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

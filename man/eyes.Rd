@@ -8,5 +8,5 @@
 Gererate an identity matrix with dimension n.
 }
 \examples{
-\code{> eyes(3)}
+\code{eyes(3)}
 }
