@@ -2,7 +2,7 @@
 \alias{DDLeslie_sampler}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Integrated Population Model for Harvesting and Aerial Counting data under Baysian Framework
+Integrated Population Model for Harvesting and Aerial Counting data under Bayesian Framework
 }
 \description{
 Main sampler of the posterior distribution of vital rates and harvest count in \code{ReDDLeslie}.
@@ -45,7 +45,7 @@ Best estimation of fecundity. Number of rows and columns should be less than har
 \code{nrow(mean.f) == nrow(Harv.data) & ncol(mean.f)==ncol(Harv.data)-1}.
 }
   \item{mean.s}{
-Samilar to mean.f, for survival.
+Similar to mean.f, for survival.
 }
   \item{mean.SRB}{
 Similar to mean.f, sex ratio at birth, but note SRB is assumed having no age structure. Thus a full SRB matrix should only have one row.
@@ -171,9 +171,14 @@ Do not use Assumptions unless you understand it.
 }
 \value{
 %%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
+A list with length 7:
+\item{mcmc.objs }{A list of mcmc objects returned by the sampling algorithm}
+\item{log.like.mcmc }{mcmc object for log likelihood }
+\item{alg.stats}{algorithm statistics, e.g. acceptance rate}
+\item{model.checking}{Model checking, including DIC, absolute difference calculated at point estimation and standard deviation of fitted values}
+\item{fixed.params}{fixed parameters}
+\item{start.vals}{starting value of the algorithm}
+\item{alg.params}{parameters for algorithm setting}
 %% ...
 }
 \references{
@@ -199,6 +204,21 @@ DDLeslie_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
     ,ChicagoDeerdata$mean.SRB,ChicagoDeerdata$mean.H,ChicagoDeerdata$mean.A
     ,n.iter = 50,burn.in = 50,thin.by = 1
     ,Assumptions = ChicagoDeerdata$Assumptions)
+
+
+## another example
+### This makes a full prior harvest matrix and the model will run a fully age
+### and time specific reconstruction of harvest rate together with other vital rates.
+
+
+mean.H.full <- ChicagoDeerdata$Assumptions$Harv$age \%*\% as.matrix( ChicagoDeerdata$mean.H) \%*\% ChicagoDeerdata$Assumptions$Harv$time
+set.seed(42)
+DDLeslie_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
+    ,ChicagoDeerdata$nage,ChicagoDeerdata$mean.f,ChicagoDeerdata$mean.s
+    ,ChicagoDeerdata$mean.SRB,mean.H.full,ChicagoDeerdata$mean.A
+    ,n.iter = 50,burn.in = 50,thin.by = 1
+    )
 }
+
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
