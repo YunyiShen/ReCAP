@@ -5,7 +5,7 @@ Version: 0.1.0
 Author: Y. Shen, D. Etter
 Maintainer: Y. Shen <yshen99@wisc.edu>
 Description: Used in DDLeslieReconstruct.
-License: GPL 3.0
+License: GNU General Public License V3.0
 Encoding: UTF-8
 LazyData: true
 Imports: Rcpp (>= 1.0.1), RcppArmadillo, coda, svMisc

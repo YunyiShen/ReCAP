@@ -52,10 +52,6 @@ DDLeslie_sampler =
                          ,s.tol = 10^(-10)
                          )
 {
-        require(coda)
-        require(RcppArmadillo)
-        require(Rcpp)
-
         ## .............. Sampler .............. ##
         ## ..................................... ##
         ## -------- Checking input dimensions ------- ##

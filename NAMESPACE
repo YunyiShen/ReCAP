@@ -1,4 +1,5 @@
-importFrom(RcppArmadillo)
+import(RcppArmadillo)
+importFrom("stats", "dnorm", "dpois", "dunif", "rgamma", "rnorm","runif", "sd", "var")
 import(Rcpp)
 import(coda)
 import(svMisc)
