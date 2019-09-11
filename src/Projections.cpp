@@ -24,7 +24,7 @@ arma::mat DD(const bool& global, const arma::mat& Xn,const arma::mat & aK0, cons
   //E0 = E0/sum(E0);// This was done in main projector
   arma::mat D;
   if(global){
-    arma::mat den = ( 1 + (aK0) * (sum(Xn)) )/(1+aK0 * midP);
+    arma::mat den = ( 1 + (aK0) * (sum(Xn)) )/(1+aK0 % midP);
     D = (1-null)*den + null;
   }
   else{

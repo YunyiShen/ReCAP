@@ -49,7 +49,7 @@ prop.vars = list(fert.rate = matrix(1,nrow = nage[1],ncol = period),
 
 set.seed(42)
 
-Chicago_RES = DDLeslie_sampler( n.iter = 50, burn.in = 5,thin.by = 1, mean.f = as.matrix( mean.f)
+Chicago_RES = DDLeslie_sampler( n.iter = 1500, burn.in = 500,thin.by = 1, mean.f = as.matrix( mean.f)
                                    ,al.f = 1, be.f = 1e-2, al.s = 1, be.s = .05
                                    , al.SRB = 1, be.SRB = .05
                                    , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),matrix(100,nage[1],1),matrix(100,sum(nage),1))
@@ -67,6 +67,6 @@ Chicago_RES = DDLeslie_sampler( n.iter = 50, burn.in = 5,thin.by = 1, mean.f = a
                                    , start.sigmasq.A = .05
                                    , Harv.data = as.matrix(Harv.data)
                                    , Aerial.data = as.matrix( Aeri.data)
-                                   , prop.vars = prop.vars, estFec = T,nage = nage,estaK0 = T,null = F,global = F)
+                                   , prop.vars = prop.vars, estFec = T,nage = nage,estaK0 = T,null = F,global = T)
 
 
