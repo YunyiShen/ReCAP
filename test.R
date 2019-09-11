@@ -3,8 +3,8 @@ nage = matrix( c(8,3),2,1) # nage is female first and then male, a vector with l
 period = 14
 
 
-mean.s = read.csv("./_data_/Survival_mean_Etter.csv",row.names = 1)[,1]
-mean.f = read.csv("./_data_/Fecundity_mean.csv",row.names = 1)[,1]
+mean.s = read.csv("./_data_/Survival_mean_Etter.csv",row.names = 1)[,14]
+mean.f = read.csv("./_data_/Fecundity_mean.csv",row.names = 1)[,14]
 mean.SRB = read.csv("./_data_/SRB_mean.csv",row.names = 1)
 Harv.data = read.csv("./_data_/Culling.csv",row.names = 1)
 Aeri.data = read.csv("./_data_/Aerial_count.csv",row.names = 1)
@@ -44,11 +44,11 @@ prop.vars = list(fert.rate = matrix(1,nrow = nage[1],ncol = period),
 
 set.seed(42)
 
-Chicago_RES = DDLeslie_sampler( n.iter = 50000, burn.in = 5000,thin.by = 1, mean.f = as.matrix( mean.f)
+Chicago_RES = DDLeslie_sampler( n.iter = 200000, burn.in = 100000,thin.by = 50, mean.f = as.matrix( mean.f)
                                    ,al.f = 1, be.f = 1e-2, al.s = 1, be.s = .05
                                    , al.SRB = 1, be.SRB = .05
-                                   , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
-                                   , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
+                                   , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),100)
+                                   , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),1500)
                                    , al.H = 1, be.H = .05
                                    , al.A = 1, be.A = .05
                                    , mean.s = as.matrix(mean.s)
@@ -62,6 +62,6 @@ Chicago_RES = DDLeslie_sampler( n.iter = 50000, burn.in = 5000,thin.by = 1, mean
                                    , start.sigmasq.A = .05
                                    , Harv.data = as.matrix(Harv.data)
                                    , Aerial.data = as.matrix( Aeri.data)
-                                   , prop.vars = prop.vars, estFec = T,nage = nage,estaK0 = T,null = T)
+                                   , prop.vars = prop.vars, estFec = T,nage = nage,estaK0 = T,null = F,global = T)
 
 
