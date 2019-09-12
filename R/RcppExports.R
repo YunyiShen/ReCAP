@@ -5,15 +5,31 @@ getLeslie <- function(Surv, Fec, SRB) {
     .Call(`_ReDDLeslie_getLeslie`, Surv, Fec, SRB)
 }
 
-ProjectHarvestCpp <- function(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage) {
-    .Call(`_ReDDLeslie_ProjectHarvestCpp`, Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
+DD <- function(global, Xn, aK0, intc, null) {
+    .Call(`_ReDDLeslie_DD`, global, Xn, aK0, intc, null)
+}
+
+ProjectDDHarvest_helperCpp <- function(data_n, SRB, H_n, H_np1, aK0, global, null) {
+    .Call(`_ReDDLeslie_ProjectDDHarvest_helperCpp`, data_n, SRB, H_n, H_np1, aK0, global, null)
+}
+
+ProjectHarvestCpp <- function(Surv, Harvpar, Fec, SRB, lm_vital, aK0, global, null, bl, period, nage) {
+    .Call(`_ReDDLeslie_ProjectHarvestCpp`, Surv, Harvpar, Fec, SRB, lm_vital, aK0, global, null, bl, period, nage)
 }
 
 getAerialCount <- function(Harv, H, A) {
     .Call(`_ReDDLeslie_getAerialCount`, Harv, H, A)
 }
 
+getDDVitalRate <- function(Harv, H, aK0, global, null, nage) {
+    .Call(`_ReDDLeslie_getDDVitalRate`, Harv, H, aK0, global, null, nage)
+}
+
 eyes <- function(n) {
     .Call(`_ReDDLeslie_eyes`, n)
+}
+
+logit <- function(x) {
+    .Call(`_ReDDLeslie_logit`, x)
 }
 

@@ -19,9 +19,41 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// DD
+arma::mat DD(const bool& global, const arma::mat& Xn, const arma::mat& aK0, const arma::mat& intc, const bool& null);
+RcppExport SEXP _ReDDLeslie_DD(SEXP globalSEXP, SEXP XnSEXP, SEXP aK0SEXP, SEXP intcSEXP, SEXP nullSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const bool& >::type global(globalSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Xn(XnSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type aK0(aK0SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type intc(intcSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type null(nullSEXP);
+    rcpp_result_gen = Rcpp::wrap(DD(global, Xn, aK0, intc, null));
+    return rcpp_result_gen;
+END_RCPP
+}
+// ProjectDDHarvest_helperCpp
+arma::mat ProjectDDHarvest_helperCpp(const arma::mat& data_n, const double& SRB, const arma::mat& H_n, const arma::mat& H_np1, const List& aK0, const bool& global, const bool& null);
+RcppExport SEXP _ReDDLeslie_ProjectDDHarvest_helperCpp(SEXP data_nSEXP, SEXP SRBSEXP, SEXP H_nSEXP, SEXP H_np1SEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type data_n(data_nSEXP);
+    Rcpp::traits::input_parameter< const double& >::type SRB(SRBSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type H_n(H_nSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type H_np1(H_np1SEXP);
+    Rcpp::traits::input_parameter< const List& >::type aK0(aK0SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type global(globalSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type null(nullSEXP);
+    rcpp_result_gen = Rcpp::wrap(ProjectDDHarvest_helperCpp(data_n, SRB, H_n, H_np1, aK0, global, null));
+    return rcpp_result_gen;
+END_RCPP
+}
 // ProjectHarvestCpp
-arma::mat ProjectHarvestCpp(const arma::mat& Surv, const arma::mat& Harvpar, const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl, const int& period, const IntegerVector& nage);
-RcppExport SEXP _ReDDLeslie_ProjectHarvestCpp(SEXP SurvSEXP, SEXP HarvparSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP, SEXP blSEXP, SEXP periodSEXP, SEXP nageSEXP) {
+arma::mat ProjectHarvestCpp(const arma::mat& Surv, const arma::mat& Harvpar, const arma::mat& Fec, const arma::mat& SRB, const bool& lm_vital, const List& aK0, const bool& global, const bool& null, const arma::mat& bl, const int& period, const IntegerVector& nage);
+RcppExport SEXP _ReDDLeslie_ProjectHarvestCpp(SEXP SurvSEXP, SEXP HarvparSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP lm_vitalSEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP, SEXP blSEXP, SEXP periodSEXP, SEXP nageSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -29,13 +61,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type Harvpar(HarvparSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type Fec(FecSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type SRB(SRBSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type lm_vital(lm_vitalSEXP);
     Rcpp::traits::input_parameter< const List& >::type aK0(aK0SEXP);
     Rcpp::traits::input_parameter< const bool& >::type global(globalSEXP);
     Rcpp::traits::input_parameter< const bool& >::type null(nullSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type bl(blSEXP);
     Rcpp::traits::input_parameter< const int& >::type period(periodSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type nage(nageSEXP);
-    rcpp_result_gen = Rcpp::wrap(ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage));
+    rcpp_result_gen = Rcpp::wrap(ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, lm_vital, aK0, global, null, bl, period, nage));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -52,6 +85,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// getDDVitalRate
+List getDDVitalRate(const arma::mat& Harv, const arma::mat& H, const List& aK0, const bool& global, const bool& null, const IntegerVector& nage);
+RcppExport SEXP _ReDDLeslie_getDDVitalRate(SEXP HarvSEXP, SEXP HSEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP, SEXP nageSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Harv(HarvSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type H(HSEXP);
+    Rcpp::traits::input_parameter< const List& >::type aK0(aK0SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type global(globalSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type null(nullSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type nage(nageSEXP);
+    rcpp_result_gen = Rcpp::wrap(getDDVitalRate(Harv, H, aK0, global, null, nage));
+    return rcpp_result_gen;
+END_RCPP
+}
 // eyes
 arma::mat eyes(const int& n);
 RcppExport SEXP _ReDDLeslie_eyes(SEXP nSEXP) {
@@ -63,12 +112,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// logit
+arma::mat logit(const arma::mat& x);
+RcppExport SEXP _ReDDLeslie_logit(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(logit(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ReDDLeslie_getLeslie", (DL_FUNC) &_ReDDLeslie_getLeslie, 3},
-    {"_ReDDLeslie_ProjectHarvestCpp", (DL_FUNC) &_ReDDLeslie_ProjectHarvestCpp, 10},
+    {"_ReDDLeslie_DD", (DL_FUNC) &_ReDDLeslie_DD, 5},
+    {"_ReDDLeslie_ProjectDDHarvest_helperCpp", (DL_FUNC) &_ReDDLeslie_ProjectDDHarvest_helperCpp, 7},
+    {"_ReDDLeslie_ProjectHarvestCpp", (DL_FUNC) &_ReDDLeslie_ProjectHarvestCpp, 11},
     {"_ReDDLeslie_getAerialCount", (DL_FUNC) &_ReDDLeslie_getAerialCount, 3},
+    {"_ReDDLeslie_getDDVitalRate", (DL_FUNC) &_ReDDLeslie_getDDVitalRate, 6},
     {"_ReDDLeslie_eyes", (DL_FUNC) &_ReDDLeslie_eyes, 1},
+    {"_ReDDLeslie_logit", (DL_FUNC) &_ReDDLeslie_logit, 1},
     {NULL, NULL, 0}
 };
 

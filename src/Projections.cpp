@@ -20,15 +20,16 @@ arma::mat getLeslie(const arma::mat& Surv, const arma::mat& Fec, const double& S
 }
 
 ///Calculate the density dependency
+//[[Rcpp::export]]
 arma::mat DD(const bool& global, const arma::mat& Xn,const arma::mat & aK0, const arma::mat& intc, const bool& null){
   //E0 = E0/sum(E0);// This was done in main projector
   arma::mat D;
   if(global){
-    arma::mat D = intc + (aK0 * (1-null))*sum(Xn);
+    D = intc + (aK0 * (1-null))*sum(Xn);
 
   }
   else{
-	arma::mat D = intc + (aK0 * (1-null)) % ((Xn)) ;
+	  D = intc + (aK0 * (1-null)) % ((Xn)) ;
 
   }
   return(D);
@@ -41,6 +42,7 @@ arma::mat ProjectHarvest_helperCpp(const arma::mat& data_n,const arma::mat& Surv
 
 }
 
+//[[Rcpp::export]]
 arma::mat ProjectDDHarvest_helperCpp(const arma::mat& data_n,const double& SRB,const arma::mat& H_n, const arma::mat& H_np1,const List& aK0, const bool & global, const bool & null){
 	arma::mat X_n1 = (1-H_n) % (data_n/H_n);
 	arma::mat Fec = exp(DD(global,X_n1,aK0[0],aK0[1],null));
@@ -87,8 +89,8 @@ List getDDVitalRate(const arma::mat& Harv, const arma::mat& H, const List & aK0,
     log_Fec.col(i) = DD(global,X.col(i),aK0[0],aK0[1],null);
     logit_Surv.col(i) = DD(global,X.col(i),aK0[2],aK0[3],null);
 	}
-	Vital[1] = exp(log_Fec);
-	Vital[2] = exp(logit_Surv)/(1+exp(logit_Surv));
+	Vital[0] = exp(log_Fec);
+	Vital[1] = exp(logit_Surv)/(1+exp(logit_Surv));
 
 	return(Vital);
 }
@@ -102,4 +104,7 @@ arma::mat eyes(const int& n){
   return(I);
 }
 
-
+//[[Rcpp::export]]
+arma::mat logit(const arma::mat & x){
+  return(x/(1+exp(x)));
+}

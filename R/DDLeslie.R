@@ -145,7 +145,8 @@ DDLeslie_sampler =
                              ,thin = thin.by
                              )
             colnames(surv.prop.mcmc) = NULL
-			}
+		}
+        else surv.prop.mcmc = NULL
              # Sex Ratio at Birth
             SRB.mcmc =
                     mcmc(matrix(nrow = n.stored
@@ -153,8 +154,8 @@ DDLeslie_sampler =
                              ,start = burn.in + 1
                              ,thin = thin.by
                              )
-            colnames(surv.prop.mcmc) = NULL
-		
+            colnames(SRB.mcmc) = NULL
+
 	    log.like.mcmc =
 	            mcmc(matrix(nrow = n.stored
 		                   ,ncol = 1)
@@ -193,7 +194,7 @@ DDLeslie_sampler =
                              ,start = burn.in + 1
                              ,thin = thin.by)
                 colnames(slope.Surv.mcmc) = NULL
-				
+
 				inte.Fec.mcmc =
                     mcmc(matrix(nrow = n.stored
                              ,ncol = length(start.aK0[[2]]))
@@ -206,7 +207,7 @@ DDLeslie_sampler =
                              ,start = burn.in + 1
                              ,thin = thin.by)
                 colnames(inte.Surv.mcmc) = NULL
-				
+
             }
             else{
                 slope.Fec.mcmc = NULL
@@ -347,7 +348,7 @@ DDLeslie_sampler =
         curr.sigmasq.SRB = start.sigmasq.SRB
         curr.sigmasq.A = start.sigmasq.A
         curr.sigmasq.H = start.sigmasq.H
-       
+
 
 
 
@@ -392,7 +393,11 @@ DDLeslie_sampler =
                 (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
         curr.aeri = ( getAerialCount( Harv = ( curr.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
-
+        if(lm_vital){
+          Vitals = getDDVitalRate(curr.proj, invlogit(logit.curr.H.full), curr.aK0.full,global,  null, nage)
+          log.curr.f = log( Vitals[[1]])
+          logit.curr.s = logit(Vitals[[2]])
+        }
 
 #.. Current log posterior
 
@@ -590,8 +595,7 @@ DDLeslie_sampler =
             if(k %% 1 == 0 && k > 0) fert.rate.mcmc[k,] =
                     as.vector(exp(log.curr.f[fert.rows,]))
         }
-			if(k %% 1 == 0 && k > 0 && lm_vital) fert.rate.mcmc[k,] =
-                    as.vector(exp(log.curr.f[fert.rows,]))
+
         # pause 0519
             ##...... Survival ......##
 
@@ -726,10 +730,12 @@ DDLeslie_sampler =
                 } # close else{ after checking for s outside tol
 
             } # close loop over all age-spec survival probabilities
-		}
-            #.. Store proposed survival probability matrix
-            if(k %% 1 == 0 && k > 0) surv.prop.mcmc[k,] =
-                as.vector(invlogit(logit.curr.s))
+			  #.. Store proposed survival probability matrix
+			    if(k %% 1 == 0 && k > 0) surv.prop.mcmc[k,] =
+			        as.vector(invlogit(logit.curr.s))
+			  }
+
+
 
 
 
@@ -1128,7 +1134,8 @@ DDLeslie_sampler =
             for(j in 1:length(start.aK0)){
                 for(w in 1:length(curr.aK0[[j]])){
             prop.aK0 = curr.aK0
-            prop.aK0[[j]][w] = curr.aK0[[j]][w] + rnorm(1, 0, sqrt(prop.vars$aK0[[j]]))
+
+            prop.aK0[[j]][w] = prop.aK0[[j]][w] + rnorm(1,0,prop.vars$aK0[[j]])
             #prop.aK0[[2]] = curr.aK0[[2]] + rnorm(length(curr.aK0[[2]]), 0, sqrt(prop.vars$aK0[[2]]))
 
                 logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
@@ -1156,9 +1163,9 @@ DDLeslie_sampler =
                         } else {
 
                                 prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
-				Vitals = getDDVitalRate(full.proj, invlogit(logit.curr.H.full), prop.aK0,global,  null, nage)
+				Vitals = getDDVitalRate(full.proj, invlogit(logit.curr.H.full), prop.aK0.full,global,  null, nage)
 				log.prop.f = log( Vitals[[1]])
-				logit.prop.s = logit(Vitasl[[2]])
+				logit.prop.s = logit(Vitals[[2]])
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
                             log.post(f = log.prop.f
@@ -1240,7 +1247,7 @@ DDLeslie_sampler =
                 inte.Fec.mcmc[k,] = as.vector((curr.aK0[[2]]))
                 inte.Surv.mcmc[k,] = as.vector((curr.aK0[[4]]))
 
-                
+
 
             }
 
@@ -1848,8 +1855,8 @@ DDLeslie_sampler =
 	# calculate DIC
 	mcmc.objs = list(
 	                            #fert.rate.mcmc = fert.rate.mcmc
-                                    surv.prop.mcmc = surv.prop.mcmc
-                                    ,SRB.mcmc = SRB.mcmc
+
+                                    SRB.mcmc = SRB.mcmc
                                     ,aerial.detection.mcmc = A.mcmc
                                     ,H.mcmc = H.mcmc
                                     #,invK0.mcmc = aK0.mcmc
@@ -1861,16 +1868,23 @@ DDLeslie_sampler =
 		apply(as.matrix(kk),2,point.est)
 	})
 	if(lm_vital){
-		mcmc.objs$invK0.Fec = aK0.Fec.mcmc
-		mean.vital$invK0.Fec = apply( as.matrix( aK0.Fec.mcmc),2,point.est)
-        mcmc.objs$invK0.Surv = aK0.Surv.mcmc
-		mean.vital$invK0.Surv = apply( as.matrix( aK0.Surv.mcmc),2,point.est)
-        mcmc.objs$invK0.midPopulation.mcmc = aK0.midPopulation.mcmc
-        mean.vital$invK0.midPopulation.mcmc = apply( as.matrix( aK0.midPopulation.mcmc),2,point.est)
+		mcmc.objs$slope.Fec = slope.Fec.mcmc
+
+		mean.vital$slope.Fec = apply( as.matrix( slope.Fec.mcmc),2,point.est)
+        mcmc.objs$slope.Surv = slope.Surv.mcmc
+		mean.vital$slope.Surv = apply( as.matrix( slope.Surv.mcmc),2,point.est)
+        mcmc.objs$inte.Fec.mcmc = inte.Fec.mcmc
+        mean.vital$inte.Fec.mcmc = apply( as.matrix( inte.Fec.mcmc),2,point.est)
+        mcmc.objs$inte.Surv.mcmc = inte.Surv.mcmc
+        mean.vital$inte.Surv.mcmc = apply( as.matrix( inte.Surv.mcmc),2,point.est)
 
 	}
-	else {mean.vital$invK0.mcmc = c(0,0)}
-    if(estFec){
+	else {
+	  mean.vital$invK0.mcmc = c(0,0)
+	  surv.prop.mcmc = surv.prop.mcmc
+	  mean.vital$surv.prop.mcmc = apply( as.matrix( surv.prop.mcmc),2,point.est)
+	  }
+    if(estFec & !lm_vital){
 		mcmc.objs$fert.rate.mcmc = fert.rate.mcmc
 		mean.vital$fert.rate.mcmc = apply( as.matrix( fert.rate.mcmc),2,point.est)
     }

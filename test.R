@@ -32,28 +32,28 @@ Assumptions$Surv = list(time = eyes(period),age = as.matrix(eyes(sum(nage))))
 Assumptions$SRB = list(time = eyes(period),age = eyes(1))
 Assumptions$AerialDet  = list(time = eyes(period+1),age = eyes(1))
 Assumptions$Harv = list(time = eyes(period+1),age = Harv_assump) # tons of assumptions on vital rates
-Assumptions$aK0 = list(eyes(nage[1]),eyes(sum(nage)),eyes(nage[1]),eyes(sum(nage)))
+Assumptions$aK0 = list(eyes(nage[1]),eyes((nage[1])),eyes(sum(nage)),eyes(sum(nage)))
 # full matrix for e.g. Harvest will be:
 #  Assumptions$Harv$age %*% as.matrix(mean.H) %*% Assumptions$Harv$time
 #  It is a good idea to try the command above to see how to use assumption matrices.
 
 mean.A = matrix(0.7,1,period+1)
-mean.aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),10)
+mean.aK0 = list(matrix(0,nage[1],1),matrix(0,(nage[1]),1),10)
 prop.vars = list(fert.rate = matrix(1,nrow = nage[1],ncol = period),
                  surv.prop = matrix(1,nrow = sum(nage), ncol = period),
                  SRB = matrix(.1,nage[1],period), # vital rates has period cols
                  A = matrix(1,1,period+1),
                  H = matrix(1,nrow = 4,ncol = period+1),
-                 aK0=list(5e-8,5e-8,50,50),
+                 aK0=list(5e-4,5e-4,5e-4,5e-4),
                  baseline.pop.count = matrix(1,nrow = sum(nage),ncol = 1))
 
 set.seed(42)
 
-Chicago_RES = DDLeslie_sampler( n.iter = 50, burn.in = 50,thin.by = 1, mean.f = as.matrix( mean.f)
+Chicago_RES = DDLeslie_sampler( n.iter = 2000, burn.in = 500,thin.by = 1, mean.f = as.matrix( mean.f)
                                    ,al.f = 1, be.f = 1e-2, al.s = 1, be.s = .05
                                    , al.SRB = 1, be.SRB = .05
-                                   , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),matrix(100,nage[1],1),matrix(100,sum(nage),1))
-                                   , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),matrix(1500,nage[1],1),matrix(1500,sum(nage),1))
+                                   , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-1,(nage[1]),1),matrix(-.01,sum(nage),1),matrix(0,sum(nage),1))
+                                   , max.aK0 = list(matrix(.001,nage[1],1),matrix(2,(nage[1]),1),matrix(.01,sum(nage),1),matrix(2,sum(nage),1))
                                    , al.H = 1, be.H = .05
                                    , al.A = 1, be.A = .05
                                    , mean.s = as.matrix(mean.s)
@@ -67,6 +67,6 @@ Chicago_RES = DDLeslie_sampler( n.iter = 50, burn.in = 50,thin.by = 1, mean.f = 
                                    , start.sigmasq.A = .05
                                    , Harv.data = as.matrix(Harv.data)
                                    , Aerial.data = as.matrix( Aeri.data)
-                                   , prop.vars = prop.vars, estFec = T,nage = nage,lm_vital  = F,null = T,global = T)
+                                   , prop.vars = prop.vars, estFec = T,nage = nage,lm_vital  = T,null = F,global = T)
 
 
