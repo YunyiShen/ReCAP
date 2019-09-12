@@ -44,7 +44,7 @@ prop.vars = list(fert.rate = matrix(1,nrow = nage[1],ncol = period),
                  SRB = matrix(.1,nage[1],period), # vital rates has period cols
                  A = matrix(1,1,period+1),
                  H = matrix(1,nrow = 4,ncol = period+1),
-                 aK0=list(5e-4,5e-4,5e-4,5e-4),
+                 aK0=list(5e-6,5e-4,5e-4,5e-4),
                  baseline.pop.count = matrix(1,nrow = sum(nage),ncol = 1))
 
 set.seed(42)
