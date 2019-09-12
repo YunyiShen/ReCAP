@@ -15,8 +15,8 @@ DDLeslie_sampler =
 
                          #.. fixed variance hyper-parameters
                          ,al.f = 1, be.f = 0.05, al.s = 1, be.s = 0.1,al.SRB = 1,be.SRB = 0.05
-                         , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
-                         , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
+                         , min.aK0 = list(matrix(-.001,nage[1],1),matrix(0.1,(nage[1]),1),matrix(-.001,sum(nage),1),matrix(0.1,(sum(nage)),1))
+                         , max.aK0 = list(matrix(.001,nage[1],1),matrix(2,(nage[2]),1),matrix(.001,sum(nage),1),matrix(.9,(sum(nage)),1))
                          , al.H = 1, be.H = 0.05, al.A = 1, be.A = 0.05
                          #.. census data
                          #     *not transformed coming in*
@@ -41,7 +41,7 @@ DDLeslie_sampler =
                          #.. age group, if multiple sex, the one reproduce should be at first.
 
 
-                         ,estFec=T, estaK0 = F
+                         ,estFec=T, lm_vital = F
                          ,aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T
                          # control parameters for the model, global is whether density dependency is global rather than age specific, null is whether exist density dependency (True of not ).
                           # whether assume time homogeneous of everything, currently homo=T is not stable
@@ -125,7 +125,7 @@ DDLeslie_sampler =
         #ntimes = (!homo) * ncol(start.s) + (homo) # whether assume time homogeneous of survival etc, will influence ncol of the mcmc object
             # Fertility
 
-            if(estFec){
+        if(estFec & !lm_vital){
             fert.rate.mcmc =
                     mcmc(matrix(nrow = n.stored
                              ,ncol = length(start.f))
@@ -137,6 +137,7 @@ DDLeslie_sampler =
         }
         else{fert.rate.mcmc = NULL}
             # Survival proportions
+		if(!lm_vital){
             surv.prop.mcmc =
                     mcmc(matrix(nrow = n.stored
                              ,ncol = length(start.s))
@@ -144,6 +145,7 @@ DDLeslie_sampler =
                              ,thin = thin.by
                              )
             colnames(surv.prop.mcmc) = NULL
+			}
              # Sex Ratio at Birth
             SRB.mcmc =
                     mcmc(matrix(nrow = n.stored
@@ -152,7 +154,7 @@ DDLeslie_sampler =
                              ,thin = thin.by
                              )
             colnames(surv.prop.mcmc) = NULL
-
+		
 	    log.like.mcmc =
 	            mcmc(matrix(nrow = n.stored
 		                   ,ncol = 1)
@@ -178,30 +180,39 @@ DDLeslie_sampler =
                              ,thin = thin.by)
 
             # carrying capacity assumed to be time homogeneous
-            if(estaK0){
-                aK0.Fec.mcmc =
+            if(lm_vital){
+                slope.Fec.mcmc =
                     mcmc(matrix(nrow = n.stored
                              ,ncol = length(start.aK0[[1]]))
                              ,start = burn.in + 1
                              ,thin = thin.by)
-                colnames(aK0.Fec.mcmc) = NULL
-                aK0.Surv.mcmc =
-                    mcmc(matrix(nrow = n.stored
-                             ,ncol = length(start.aK0[[2]]))
-                             ,start = burn.in + 1
-                             ,thin = thin.by)
-                colnames(aK0.Surv.mcmc) = NULL
-                aK0.midPopulation.mcmc =
+                colnames(slope.Fec.mcmc) = NULL
+                slope.Surv.mcmc =
                     mcmc(matrix(nrow = n.stored
                              ,ncol = length(start.aK0[[3]]))
                              ,start = burn.in + 1
                              ,thin = thin.by)
-                colnames(aK0.midPopulation.mcmc) = NULL
+                colnames(slope.Surv.mcmc) = NULL
+				
+				inte.Fec.mcmc =
+                    mcmc(matrix(nrow = n.stored
+                             ,ncol = length(start.aK0[[2]]))
+                             ,start = burn.in + 1
+                             ,thin = thin.by)
+                colnames(inte.Fec.mcmc) = NULL
+                inte.Surv.mcmc =
+                    mcmc(matrix(nrow = n.stored
+                             ,ncol = length(start.aK0[[4]]))
+                             ,start = burn.in + 1
+                             ,thin = thin.by)
+                colnames(inte.Surv.mcmc) = NULL
+				
             }
             else{
-                aK0.Fec.mcmc = NULL
-                aK0.Surv.mcmc = NULL
-                aK0.midPopulation.mcmc = NULL
+                slope.Fec.mcmc = NULL
+                slope.Surv.mcmc = NULL
+                inte.Fec.mcmc = NULL
+                inte.Surv.mcmc = NULL
             }
 
             # Harvest proportion, can be either time homo or not
@@ -329,8 +340,6 @@ DDLeslie_sampler =
         logit.curr.H = logitf(start.H)
         logit.curr.A = logitf(start.A)
         curr.aK0=(start.aK0)
-        #curr.aK0=(aK0)}
-        #curr.aK0 = estaK0 * log(start.aK0) + (!estaK0) * log(K0)
         log.curr.b = log(start.b)
 
         curr.sigmasq.f = start.sigmasq.f
@@ -338,7 +347,7 @@ DDLeslie_sampler =
         curr.sigmasq.SRB = start.sigmasq.SRB
         curr.sigmasq.A = start.sigmasq.A
         curr.sigmasq.H = start.sigmasq.H
-        #curr.sigmasq.aK0 = start.sigmasq.aK0
+       
 
 
 
@@ -380,7 +389,7 @@ DDLeslie_sampler =
 
 
         curr.proj =
-                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
+                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
         curr.aeri = ( getAerialCount( Harv = ( curr.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
 
@@ -396,7 +405,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -456,7 +465,7 @@ DDLeslie_sampler =
 
 
             ## -------- Vital Rate M-H Steps ------- ##
-        if(estFec){
+        if(estFec & !lm_vital){
             ##...... Fertility .....##
 
             if(verb && identical(i%%1000, 0)) cat("\n", i, " Fertility")
@@ -488,7 +497,7 @@ DDLeslie_sampler =
 
 
                 full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.prop.f.full)#=- use proposal
+                                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.prop.f.full)#=- use proposal
                                 , SRB = invlogit(logit.curr.SRB.full)
                                 , aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
@@ -515,7 +524,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -581,13 +590,15 @@ DDLeslie_sampler =
             if(k %% 1 == 0 && k > 0) fert.rate.mcmc[k,] =
                     as.vector(exp(log.curr.f[fert.rows,]))
         }
+			if(k %% 1 == 0 && k > 0 && lm_vital) fert.rate.mcmc[k,] =
+                    as.vector(exp(log.curr.f[fert.rows,]))
         # pause 0519
             ##...... Survival ......##
 
             if(verb && identical(i%%1000, 0)) cat("\n", i, " Survival")
 
             # - Proposal
-
+			if(!lm_vital){
             #.. cycle through components
             for(j in 1:length(logit.curr.s)) {
 
@@ -628,7 +639,7 @@ DDLeslie_sampler =
 
 
                         full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.prop.s.full)#=- use proposal
+                                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.prop.s.full)#=- use proposal
                                 , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
@@ -651,7 +662,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -715,7 +726,7 @@ DDLeslie_sampler =
                 } # close else{ after checking for s outside tol
 
             } # close loop over all age-spec survival probabilities
-
+		}
             #.. Store proposed survival probability matrix
             if(k %% 1 == 0 && k > 0) surv.prop.mcmc[k,] =
                 as.vector(invlogit(logit.curr.s))
@@ -771,7 +782,7 @@ DDLeslie_sampler =
 
 
                         full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full)
+                                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full)
                                 , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.prop.SRB.full)#=- use proposal
                                 , aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
@@ -795,7 +806,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -899,7 +910,7 @@ DDLeslie_sampler =
 
 
                         full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar =( invlogit(logit.prop.H.full))#=- use proposal
+                                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full), Harvpar =( invlogit(logit.prop.H.full))#=- use proposal
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
@@ -922,7 +933,7 @@ DDLeslie_sampler =
                                              ,H = logit.prop.H #=- use proposal
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1021,7 +1032,7 @@ DDLeslie_sampler =
 
 
                 full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full)
+                                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full)
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
@@ -1044,7 +1055,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1112,7 +1123,7 @@ DDLeslie_sampler =
 
 
             ##...... Carrying Capacity ......##
-        if(estaK0){
+        if(lm_vital){
 
             for(j in 1:length(start.aK0)){
                 for(w in 1:length(curr.aK0[[j]])){
@@ -1132,7 +1143,7 @@ DDLeslie_sampler =
 
 
                 full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = prop.aK0.full#<- use proposal
+                                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = prop.aK0.full#<- use proposal
                                 , global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
@@ -1145,17 +1156,19 @@ DDLeslie_sampler =
                         } else {
 
                                 prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
-
+				Vitals = getDDVitalRate(full.proj, invlogit(logit.curr.H.full), prop.aK0,global,  null, nage)
+				log.prop.f = log( Vitals[[1]])
+				logit.prop.s = logit(Vitasl[[2]])
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
-                            log.post(f = log.curr.f
-                                             ,s = logit.curr.s
+                            log.post(f = log.prop.f
+                                             ,s = logit.prop.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = prop.aK0 #=- use proposal
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1209,6 +1222,8 @@ DDLeslie_sampler =
                                 curr.aK0 = prop.aK0
                                 curr.proj = full.proj
 				                curr.aeri=prop.aeri
+							    logit.curr.s = logit.prop.s
+								log.curr.f = log.prop.f
                                 log.curr.posterior = log.prop.posterior
                         }
 
@@ -1219,10 +1234,13 @@ DDLeslie_sampler =
                 }
             }
             #.. Store proposed aK0 matrix
-            if(k %% 1 == 0 && k > 0 && estaK0){
-                aK0.Fec.mcmc[k,] = as.vector((curr.aK0[[1]]))
-                aK0.Surv.mcmc[k,] = as.vector((curr.aK0[[2]]))
-                aK0.midPopulation.mcmc[k,] = as.vector((curr.aK0[[3]]))
+            if(k %% 1 == 0 && k > 0 && lm_vital){
+                slope.Fec.mcmc[k,] = as.vector((curr.aK0[[1]]))
+                slope.Surv.mcmc[k,] = as.vector((curr.aK0[[3]]))
+                inte.Fec.mcmc[k,] = as.vector((curr.aK0[[2]]))
+                inte.Surv.mcmc[k,] = as.vector((curr.aK0[[4]]))
+
+                
 
             }
 
@@ -1259,7 +1277,7 @@ DDLeslie_sampler =
 
 
                 full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full), SRB = invlogit(logit.curr.SRB.full),Fec=exp(log.curr.f.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.prop.b)    #=- use proposal
+                                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full), SRB = invlogit(logit.curr.SRB.full),Fec=exp(log.curr.f.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.prop.b)    #=- use proposal
                                 , period = proj.periods, nage = nage))
 
 
@@ -1282,7 +1300,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.prop.b ) #=- use proposal
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1375,7 +1393,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1460,7 +1478,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1546,7 +1564,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1631,7 +1649,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1716,7 +1734,7 @@ DDLeslie_sampler =
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
+                                             ,estFec=estFec, lm_vital=lm_vital
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
                                              ,prior.mean.SRB = logit.mean.SRB
@@ -1798,7 +1816,7 @@ DDLeslie_sampler =
 
 
                 full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
+                                (ProjectHarvest(lm_vital=lm_vital,Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 			full.aeri = getAerialCount( Harv = full.proj,H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full))
             if(k %% 1 == 0 && k > 0){
@@ -1842,7 +1860,7 @@ DDLeslie_sampler =
 	mean.vital = lapply(mcmc.objs,function(kk){
 		apply(as.matrix(kk),2,point.est)
 	})
-	if(estaK0){
+	if(lm_vital){
 		mcmc.objs$invK0.Fec = aK0.Fec.mcmc
 		mean.vital$invK0.Fec = apply( as.matrix( aK0.Fec.mcmc),2,point.est)
         mcmc.objs$invK0.Surv = aK0.Surv.mcmc
@@ -1865,7 +1883,7 @@ DDLeslie_sampler =
                 logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
 
                 #full.proj =
-                #                (ProjectHarvest(Surv = matrix( mean.vital$surv.prop.mcmc,ncol = proj.periods), Harvpar = matrix( mean.vital$H.mcmc,ncol = proj.periods+1),Fec=matrix(mean.vital$fert.rate.mcmc,ncol = proj.periods), SRB = mean.vital$SRB.mcmc, aK0 = mean.vital$invK0.mcmc, global = global, null = null, bl = mean.vital$baseline.count.mcmc     , period = proj.periods, nage = nage))
+                #                (ProjectHarvest(lm_vital=lm_vital,Surv = matrix( mean.vital$surv.prop.mcmc,ncol = proj.periods), Harvpar = matrix( mean.vital$H.mcmc,ncol = proj.periods+1),Fec=matrix(mean.vital$fert.rate.mcmc,ncol = proj.periods), SRB = mean.vital$SRB.mcmc, aK0 = mean.vital$invK0.mcmc, global = global, null = null, bl = mean.vital$baseline.count.mcmc     , period = proj.periods, nage = nage))
 
 			#full.aeri = getAerialCount( Harv = full.proj,H = matrix( mean.vital$H.mcmc,ncol = proj.periods+1),A = mean.vital$aerial.detection.mcmc)
 
@@ -1905,8 +1923,7 @@ DDLeslie_sampler =
 
 	model.checking = list(
 		DIC=DIC,
-		absolute.difference = list(MAD.harv = mean_abs_dif_harv,
-	                                                             SEAD.harv = se_abs_dif_harv,
+		absolute.difference = list(MAD.harv = mean_abs_dif_harv,SEAD.harv = se_abs_dif_harv,
 								     MAD.aerial = mean_abs_dif_ae,
 								     SEAD.aerial = se_abs_dif_ae),
 	    sd = mean_sd_counts

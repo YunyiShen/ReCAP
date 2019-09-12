@@ -8,8 +8,8 @@ nage = matrix( c(8,3),2,1) # nage is female first and then male, a vector with l
 period = 14
 
 
-mean.s = read.csv("./_data_/Survival_mean_Etter.csv",row.names = 1)[,14]
-mean.f = read.csv("./_data_/Fecundity_mean.csv",row.names = 1)[,14]
+mean.s = read.csv("./_data_/Survival_mean_Etter.csv",row.names = 1)
+mean.f = read.csv("./_data_/Fecundity_mean.csv",row.names = 1)
 mean.SRB = read.csv("./_data_/SRB_mean.csv",row.names = 1)
 Harv.data = read.csv("./_data_/Culling.csv",row.names = 1)
 Aeri.data = read.csv("./_data_/Aerial_count.csv",row.names = 1)
@@ -21,12 +21,12 @@ Harv_assump = as.matrix(Harv_assump) # this is the assumption matrix for specifi
 
 Assumptions = list()
 
-#Assumptions$Fec = list(time = eyes(period),age = as.matrix(eyes(nage[1])))
-#Assumptions$Surv = list(time = eyes(period),age = as.matrix(eyes(sum(nage))))
+Assumptions$Fec = list(time = eyes(period),age = as.matrix(eyes(nage[1])))
+Assumptions$Surv = list(time = eyes(period),age = as.matrix(eyes(sum(nage))))
 
 # for direct inference:
-Assumptions$Fec = list(time = matrix(1,1,period),age = eyes((nage[1])))
-Assumptions$Surv = list(time = matrix(1,1,period),age = eyes(sum(nage)))
+#Assumptions$Fec = list(time = matrix(1,1,period),age = eyes((nage[1])))
+#Assumptions$Surv = list(time = matrix(1,1,period),age = eyes(sum(nage)))
 # end direct inference
 
 Assumptions$SRB = list(time = eyes(period),age = eyes(1))
@@ -49,7 +49,7 @@ prop.vars = list(fert.rate = matrix(1,nrow = nage[1],ncol = period),
 
 set.seed(42)
 
-Chicago_RES = DDLeslie_sampler( n.iter = 1500, burn.in = 500,thin.by = 1, mean.f = as.matrix( mean.f)
+Chicago_RES = DDLeslie_sampler( n.iter = 50, burn.in = 50,thin.by = 1, mean.f = as.matrix( mean.f)
                                    ,al.f = 1, be.f = 1e-2, al.s = 1, be.s = .05
                                    , al.SRB = 1, be.SRB = .05
                                    , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),matrix(100,nage[1],1),matrix(100,sum(nage),1))
@@ -67,6 +67,6 @@ Chicago_RES = DDLeslie_sampler( n.iter = 1500, burn.in = 500,thin.by = 1, mean.f
                                    , start.sigmasq.A = .05
                                    , Harv.data = as.matrix(Harv.data)
                                    , Aerial.data = as.matrix( Aeri.data)
-                                   , prop.vars = prop.vars, estFec = T,nage = nage,estaK0 = T,null = F,global = T)
+                                   , prop.vars = prop.vars, estFec = T,nage = nage,lm_vital  = F,null = T,global = T)
 
 

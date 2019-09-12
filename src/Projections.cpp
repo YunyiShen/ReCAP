@@ -20,37 +20,51 @@ arma::mat getLeslie(const arma::mat& Surv, const arma::mat& Fec, const double& S
 }
 
 ///Calculate the density dependency
-arma::mat DD(const bool& global, const arma::mat& Xn,const arma::mat & aK0, const arma::mat& midP, const bool& null){
+arma::mat DD(const bool& global, const arma::mat& Xn,const arma::mat & aK0, const arma::mat& intc, const bool& null){
   //E0 = E0/sum(E0);// This was done in main projector
   arma::mat D;
   if(global){
-    arma::mat den = ( 1 + (aK0) * (sum(Xn)) )/(1+aK0 % midP);
-    D = (1-null)*den + null;
+    arma::mat D = intc + (aK0 * (1-null))*sum(Xn);
+
   }
   else{
-	arma::mat den = ( 1 + (aK0) % ((Xn)) )/(1+aK0 % midP);
-    D = (1-null)*den + null;
+	arma::mat D = intc + (aK0 * (1-null)) % ((Xn)) ;
+
   }
   return(D);
 }
 
 ///Helper function for a single year projection, inner function, export for test.
-arma::mat ProjectHarvest_helperCpp(const arma::mat& data_n,const arma::mat& Surv, const arma::mat& Fec,const double& SRB,const arma::mat& H_n, const arma::mat& H_np1,bool global, const List& aK0,const bool & null){
+arma::mat ProjectHarvest_helperCpp(const arma::mat& data_n,const arma::mat& Surv, const arma::mat& Fec,const double& SRB,const arma::mat& H_n, const arma::mat& H_np1){
 	arma::mat X_n1 = (1-H_n) % (data_n/H_n);
-	arma::mat D_bir = DD(global, X_n1.rows(0,(Fec.n_rows-1)), aK0[0], aK0[2] ,null);
-	arma::mat D_dea = DD(global, X_n1, aK0[1], aK0[3] ,null);
-	return(H_np1 % (getLeslie(Surv % D_dea, Fec % D_bir, SRB)*X_n1));
+	return(H_np1 % (getLeslie(Surv, Fec, SRB)*X_n1));
 
 }
 
+arma::mat ProjectDDHarvest_helperCpp(const arma::mat& data_n,const double& SRB,const arma::mat& H_n, const arma::mat& H_np1,const List& aK0, const bool & global, const bool & null){
+	arma::mat X_n1 = (1-H_n) % (data_n/H_n);
+	arma::mat Fec = exp(DD(global,X_n1,aK0[0],aK0[1],null));
+	arma::mat logit_Surv = DD(global,X_n1,aK0[2],aK0[3],null);
+	arma::mat Surv = exp(logit_Surv)/(1+exp(logit_Surv));
+	return(H_np1 % (getLeslie(Surv, Fec, SRB)*X_n1));
+
+}
+
+
 ///main projection function
 //[[Rcpp::export]]
-arma::mat ProjectHarvestCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
+arma::mat ProjectHarvestCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB,const bool& lm_vital, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
 	arma::mat Harvest(sum(nage),period+1);
 	Harvest.col(0) = bl;
-	//E0 = E0/(sum(E0));// need to check whether there is one in R call rather than here.
-	for(int i = 1; i<period + 1; i++){
-		Harvest.col(i) = ProjectHarvest_helperCpp(Harvest.col(i-1),Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)), Harvpar.col(i-1),Harvpar.col(i),global, aK0,null);
+	if(!lm_vital){
+		for(int i = 1; i<period + 1; i++){
+			Harvest.col(i) = ProjectHarvest_helperCpp(Harvest.col(i-1),Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)), Harvpar.col(i-1),Harvpar.col(i));
+		}
+	}
+	else{
+		for(int i = 1; i<period + 1; i++){
+			Harvest.col(i) = ProjectDDHarvest_helperCpp(Harvest.col(i-1),SRB(0,i-1), Harvpar.col(i-1),Harvpar.col(i),aK0,global,null);//aK0 here should assumed to be full version, done in R
+		}
 	}
 	return(Harvest);
 }
@@ -60,6 +74,25 @@ arma::mat ProjectHarvestCpp(const arma::mat& Surv,const arma::mat& Harvpar,const
 arma::mat getAerialCount(const arma::mat& Harv, const arma::mat& H, const arma::mat& A){
   return((sum((1/H-1) % Harv))%A);
 }
+
+/// get linear survival and fecundity
+//[[Rcpp::export]]
+List getDDVitalRate(const arma::mat& Harv, const arma::mat& H, const List & aK0,const bool & global, const bool & null, const IntegerVector& nage){
+	arma::mat X = (1/H-1) % Harv; // living individual before harvest
+	X = X.cols(0,X.n_cols -2); // we do not need last year
+    List Vital(2);
+    arma::mat log_Fec(nage(0),X.n_cols);
+    arma::mat logit_Surv(sum(nage),X.n_cols);
+	for(int i=0; i<X.n_cols;i++){
+    log_Fec.col(i) = DD(global,X.col(i),aK0[0],aK0[1],null);
+    logit_Surv.col(i) = DD(global,X.col(i),aK0[2],aK0[3],null);
+	}
+	Vital[1] = exp(log_Fec);
+	Vital[2] = exp(logit_Surv)/(1+exp(logit_Surv));
+
+	return(Vital);
+}
+
 
 ///Misc
 //[[Rcpp::export]]

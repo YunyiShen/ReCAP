@@ -116,11 +116,11 @@ log.lhood =function(n.census, n.hat){
 } # checked 10/24/2018
 
 ## .............. Posterior ............ ##
-## ..................................... ##    keep it, change in sampler function, but no migration here, should add estaK0
+## ..................................... ##    keep it, change in sampler function, but no migration here, should add lm_vital
 
 log.post = function(## estimated vitals
                     f, s, SRB,baseline.n, aK0, A, H # A for Aerial count detection probability
-                    , estFec, estaK0
+                    , estFec, lm_vital
                     ## fixed prior means on vitals
                     , prior.mean.f, prior.mean.s, prior.mean.SRB
                     , prior.mean.b #, prior.mean.aK0
@@ -158,7 +158,7 @@ log.post = function(## estimated vitals
             log.sigmasq.f.prior = 0
         }
 
-        if(estaK0){
+        if(lm_vital){
             log.aK0.prior =#sum( dunif(aK0[[1]],min.aK0[[1]],max.aK0[[1]],T) , dunif(aK0[[2]],min.aK0[[2]],max.aK0[[2]],T))
                 Reduce(sum,
                        lapply(1:length(aK0),
@@ -238,8 +238,8 @@ HarvestSen = function(Fec,Surv,SRB,Harvpar,nage,Harv_assump){
         return(H_Sen)
 }
 
-ProjectHarvest = function(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T){
-	ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
+ProjectHarvest = function(lm_vital = F,Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T){
+	ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, lm_vital, aK0, global, null, bl, period, nage)
 }
 
 
