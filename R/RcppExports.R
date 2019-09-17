@@ -13,6 +13,18 @@ getAerialCount <- function(Harv, H, A) {
     .Call(`_ReDDLeslie_getAerialCount`, Harv, H, A)
 }
 
+get_obs_LambdasA <- function(Ae, A) {
+    .Call(`_ReDDLeslie_get_obs_LambdasA`, Ae, A)
+}
+
+get_hypo_Lambdas_helper <- function(Harv_n, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1) {
+    .Call(`_ReDDLeslie_get_hypo_Lambdas_helper`, Harv_n, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1)
+}
+
+get_hypo_Lambdas <- function(Harvest, Harvpar, Surv, Fec, SRB) {
+    .Call(`_ReDDLeslie_get_hypo_Lambdas`, Harvest, Harvpar, Surv, Fec, SRB)
+}
+
 eyes <- function(n) {
     .Call(`_ReDDLeslie_eyes`, n)
 }

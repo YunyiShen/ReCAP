@@ -52,6 +52,49 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_obs_LambdasA
+arma::mat get_obs_LambdasA(const arma::mat& Ae, const arma::mat& A);
+RcppExport SEXP _ReDDLeslie_get_obs_LambdasA(SEXP AeSEXP, SEXP ASEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Ae(AeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    rcpp_result_gen = Rcpp::wrap(get_obs_LambdasA(Ae, A));
+    return rcpp_result_gen;
+END_RCPP
+}
+// get_hypo_Lambdas_helper
+arma::mat get_hypo_Lambdas_helper(const arma::mat& Harv_n, const arma::mat& H_n, const arma::mat& Surv_np1, const arma::mat& Fec_np1, const double& SRB_np1, const arma::mat& H_np1);
+RcppExport SEXP _ReDDLeslie_get_hypo_Lambdas_helper(SEXP Harv_nSEXP, SEXP H_nSEXP, SEXP Surv_np1SEXP, SEXP Fec_np1SEXP, SEXP SRB_np1SEXP, SEXP H_np1SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Harv_n(Harv_nSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type H_n(H_nSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Surv_np1(Surv_np1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Fec_np1(Fec_np1SEXP);
+    Rcpp::traits::input_parameter< const double& >::type SRB_np1(SRB_np1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type H_np1(H_np1SEXP);
+    rcpp_result_gen = Rcpp::wrap(get_hypo_Lambdas_helper(Harv_n, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1));
+    return rcpp_result_gen;
+END_RCPP
+}
+// get_hypo_Lambdas
+arma::mat get_hypo_Lambdas(const arma::mat& Harvest, const arma::mat& Harvpar, const arma::mat& Surv, const arma::mat& Fec, const arma::mat& SRB);
+RcppExport SEXP _ReDDLeslie_get_hypo_Lambdas(SEXP HarvestSEXP, SEXP HarvparSEXP, SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Harvest(HarvestSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Harvpar(HarvparSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Surv(SurvSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Fec(FecSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type SRB(SRBSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_hypo_Lambdas(Harvest, Harvpar, Surv, Fec, SRB));
+    return rcpp_result_gen;
+END_RCPP
+}
 // eyes
 arma::mat eyes(const int& n);
 RcppExport SEXP _ReDDLeslie_eyes(SEXP nSEXP) {
@@ -68,6 +111,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ReDDLeslie_getLeslie", (DL_FUNC) &_ReDDLeslie_getLeslie, 3},
     {"_ReDDLeslie_ProjectHarvestCpp", (DL_FUNC) &_ReDDLeslie_ProjectHarvestCpp, 10},
     {"_ReDDLeslie_getAerialCount", (DL_FUNC) &_ReDDLeslie_getAerialCount, 3},
+    {"_ReDDLeslie_get_obs_LambdasA", (DL_FUNC) &_ReDDLeslie_get_obs_LambdasA, 2},
+    {"_ReDDLeslie_get_hypo_Lambdas_helper", (DL_FUNC) &_ReDDLeslie_get_hypo_Lambdas_helper, 6},
+    {"_ReDDLeslie_get_hypo_Lambdas", (DL_FUNC) &_ReDDLeslie_get_hypo_Lambdas, 5},
     {"_ReDDLeslie_eyes", (DL_FUNC) &_ReDDLeslie_eyes, 1},
     {NULL, NULL, 0}
 };

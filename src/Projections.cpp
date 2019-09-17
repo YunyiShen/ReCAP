@@ -1,6 +1,8 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
 #include <climits>
+#include <complex>
+//#include<lapacke.h>
 using namespace Rcpp;
 
 ///get Leslie matrix from survival etc.
@@ -14,7 +16,7 @@ arma::mat getLeslie(const arma::mat& Surv, const arma::mat& Fec, const double& S
 	Tr.row(nage_female).cols(0,nage_female-1) = (1 - SRB) * Fec.t();
 	Tr.submat(1,0,nage_female-1,nage_female-2).diag() = Surv.rows(0,nage_female-2).t();
 	Tr(nage_female-1,nage_female-1) = Surv(nage_female-1,0);
-	Tr.submat(nage_female + 1,nage_female,nage_male + nage_female-1,nage_male + nage_female-2).diag() = Surv.rows(nage_female,nage_male + nage_female-2).t();
+	if(nage_male>1) Tr.submat(nage_female + 1,nage_female,nage_male + nage_female-1,nage_male + nage_female-2).diag() = Surv.rows(nage_female,nage_male + nage_female-2).t();
 	Tr(nage_male+nage_female-1,nage_male+nage_female-1) = Surv(nage_male+nage_female-1,0);
 	return(Tr);
 }
@@ -59,6 +61,61 @@ arma::mat ProjectHarvestCpp(const arma::mat& Surv,const arma::mat& Harvpar,const
 //[[Rcpp::export]]
 arma::mat getAerialCount(const arma::mat& Harv, const arma::mat& H, const arma::mat& A){
   return((sum((1/H-1) % Harv))%A);
+}
+
+
+///get observed lambda (growth rate from harvest)
+
+arma::mat get_obs_LambdasH(const arma::mat& Harv, const arma::mat& H){
+  arma::mat Living_total = sum((1/H-1) % Harv);//living individual at all year
+  return((Living_total.cols(0,Harv.n_cols-2))/(Living_total.cols(1,Harv.n_cols-1))); // Lambdas
+}
+
+///get observed lambda (growth rate from Aerial count)
+//[[Rcpp::export]]
+arma::mat get_obs_LambdasA(const arma::mat& Ae, const arma::mat& A){
+  arma::mat Living_total = Ae/A;//living individual at all year
+  return((Living_total.cols(0,Ae.n_cols-2))/(Living_total.cols(1,Ae.n_cols-1))); // Lambdas
+}
+
+///get lambda w/, w/o harvest and maximum lambda, single year
+//[[Rcpp::export]]
+arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
+                              , const arma::mat& H_n // harvest rate at year n
+                              , const arma::mat& Surv_np1 // survival of year n+1
+                              , const arma::mat& Fec_np1 // Fecundity of year n+1
+                              , const double& SRB_np1 // SRB of year n+1
+                              , const arma::mat& H_np1){
+  arma::mat res(3,1);
+  arma::mat living = (1/H_n-1) % Harv_n;
+  arma::mat Leslie_np1 =  getLeslie(Surv_np1,Fec_np1,SRB_np1);
+  // eigen problem, possible lambda
+  //arma::Col<std::complex<double>> eigens = eig_gen(Leslie_np1);
+  res.row(0).col(0) = real(max((eig_gen(Leslie_np1))));// get the largest one
+
+  // w/o harvest:
+
+  res.row(1).col(0) = sum(Leslie_np1 * living)/sum(living);
+
+  // lambda w/ harvest
+  res.row(2).col(0) = sum(H_np1 % (Leslie_np1 * living))/sum(living);
+  return(res);
+
+}
+
+///get lambda w/, w/o harvest and maximum lambda, single year
+//[[Rcpp::export]]
+arma::mat get_hypo_Lambdas(const arma::mat& Harvest
+                             , const arma::mat& Harvpar
+                             , const arma::mat& Surv
+                             , const arma::mat& Fec
+                             , const arma::mat& SRB){
+  int periods = Harvest.n_cols-1;
+  arma::mat Lambdas(3,periods);
+  for(int i=1;i<periods+1;i++){
+    Lambdas.col(i)=get_hypo_Lambdas_helper( Harvest.col(i-1) , Harvpar.col(i-1) , Surv.col(i) , Fec.col(i) , SRB(0,i) , Harvpar.col(i));
+  }
+  return(Lambdas);
 }
 
 ///Misc
