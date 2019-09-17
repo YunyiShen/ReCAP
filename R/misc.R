@@ -242,4 +242,14 @@ ProjectHarvest = function(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(
 	ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
 }
 
+getListmcmc_full = function(mcmc_obj,Assumptions = list()){
+  nsample = nrow(mcmc_obj[[1]])
+  nprojperiod = ncol(mcmc_obj$SRB.mcmc)
+  nage_female = ncol(mcmc_obj$fert.rate.mcmc)/nprojperiod
+  nage_total = ncol(mcmc_obj$surv.prop.mcmc)/nprojperiod
+  Assumptions = Check_assumptions(Assumptions,c(nage_female,nage_total-nage_female),nprojperiod)
+  res = lapply(1:nsample,function(i,nage_female,nage_total,Assumptions){
 
+  },nage_female,nage_total,Assumptions)
+
+}

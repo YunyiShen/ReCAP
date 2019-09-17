@@ -86,19 +86,27 @@ arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
                               , const arma::mat& Fec_np1 // Fecundity of year n+1
                               , const double& SRB_np1 // SRB of year n+1
                               , const arma::mat& H_np1){
-  arma::mat res(3,1);
+  arma::mat res(4,1);
   arma::mat living = (1/H_n-1) % Harv_n;
   arma::mat Leslie_np1 =  getLeslie(Surv_np1,Fec_np1,SRB_np1);
   // eigen problem, possible lambda
   //arma::Col<std::complex<double>> eigens = eig_gen(Leslie_np1);
-  res.row(0).col(0) = real(max((eig_gen(Leslie_np1))));// get the largest one
+
+  //max intrinsic
+  res.row(0).col(0) = max(sum(Leslie_np1));
+
+  //stable intrinsic
+  res.row(1).col(0) = real(max((eig_gen(Leslie_np1))));// get the intrinsic one
 
   // w/o harvest:
 
-  res.row(1).col(0) = sum(Leslie_np1 * living)/sum(living);
+  res.row(2).col(0) = sum(Leslie_np1 * living)/sum(living);
+
+  //min intrinsic
+  res.row(3).col(0) = min(sum(Leslie_np1));
 
   // lambda w/ harvest
-  res.row(2).col(0) = sum(H_np1 % (Leslie_np1 * living))/sum(living);
+  //res.row(3).col(0) = sum(H_np1 % (Leslie_np1 * living))/sum(living);
   return(res);
 
 }
@@ -111,7 +119,7 @@ arma::mat get_hypo_Lambdas(const arma::mat& Harvest
                              , const arma::mat& Fec
                              , const arma::mat& SRB){
   int periods = Harvest.n_cols-1;
-  arma::mat Lambdas(3,periods);
+  arma::mat Lambdas(4,periods);
   for(int i=1;i<periods+1;i++){
     Lambdas.col(i)=get_hypo_Lambdas_helper( Harvest.col(i-1) , Harvpar.col(i-1) , Surv.col(i) , Fec.col(i) , SRB(0,i) , Harvpar.col(i));
   }
