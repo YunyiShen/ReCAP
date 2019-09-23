@@ -1,6 +1,6 @@
 Package: ReCAP
 Type: Package
-Title: Reconstruct Culling and Aerial count of Population model
+Title: Reconstruct Culling and Aerial count of Population
 Version: 0.1.0
 Author: Y. Shen, D. Etter
 Maintainer: Y. Shen <yshen99@wisc.edu>
