@@ -1,6 +1,6 @@
-Package: ReDDLeslie
+Package: ReCAP
 Type: Package
-Title: Reconstruct Density Dependent Leslie model from intensive culling data
+Title: Reconstruct Culling and Aerial count of Population model
 Version: 0.1.0
 Author: Y. Shen, D. Etter
 Maintainer: Y. Shen <yshen99@wisc.edu>

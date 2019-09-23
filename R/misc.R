@@ -242,14 +242,30 @@ ProjectHarvest = function(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(
 	ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
 }
 
-getListmcmc_full = function(mcmc_obj,Assumptions = list()){
+getListmcmc_full = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   nsample = nrow(mcmc_obj[[1]])
-  nprojperiod = ncol(mcmc_obj$SRB.mcmc)
-  nage_female = ncol(mcmc_obj$fert.rate.mcmc)/nprojperiod
-  nage_total = ncol(mcmc_obj$surv.prop.mcmc)/nprojperiod
-  Assumptions = Check_assumptions(Assumptions,c(nage_female,nage_total-nage_female),nprojperiod)
-  res = lapply(1:nsample,function(i,nage_female,nage_total,Assumptions){
-
-  },nage_female,nage_total,Assumptions)
-
+  Assumptions = Check_assumptions(Assumptions,nage,n_proj)
+  lapply(1:nsample,function(i,mcmc_obj,nage_female,nage_total,Assumptions){
+    temp = lapply(mcmc_obj,function(obj,i){obj[i,]},i=i)
+    temp$surv.prop.mcmc = Assumptions$Surv$age %*% matrix(temp$surv.prop.mcmc,nrow = ncol(Assumptions$Surv$age)) %*% Assumptions$Surv$time
+    temp$SRB.mcmc = Assumptions$SRB$age %*% matrix(temp$SRB.mcmc,nrow = ncol(Assumptions$SRB$age)) %*% Assumptions$SRB$time
+    temp$aerial.detection.mcmc = Assumptions$AerialDet$age %*% matrix(temp$aerial.detection.mcmc,nrow = ncol(Assumptions$AerialDet$age)) %*% Assumptions$AerialDet$time
+    temp$H.mcmc = Assumptions$Harv$age %*% matrix(temp$H.mcmc,nrow = ncol(Assumptions$Harv$age)) %*% Assumptions$Harv$time
+    temp$fert.rate.mcmc = Assumptions$Fec$age %*% matrix(temp$fert.rate.mcmc,nrow = ncol(Assumptions$Fec$age)) %*% Assumptions$Fec$time
+    temp$harvest.mcmc = cbind(temp$baseline.count.mcmc, matrix(temp$harvest.mcmc,ncol = n_proj) )
+    temp$aerial.count.mcmc = matrix(temp$aerial.count.mcmc,ncol = n_proj+1)
+    return(temp)
+  } , mcmc_obj,nage[1],sum(nage),Assumptions)
 }
+
+## analysis Lambda, only work for no aK0 settings.
+analysisLambda = function(mcmc_obj,Assumptions = list(),nage,n_proj){
+  mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
+  lapply(1:length(mcmc_list),function(i,mcmc_list){
+    temp = mcmc_list[[i]]
+    hypo_lamdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$H.mcmc,temp$surv.prop.mcmc,temp$fert.rate.mcmc,temp$SRB.mcmc)
+    obs_lambda = get_obs_LambdasA(temp$aerial.count.mcmc,temp$aerial.detection.mcmc)
+    lambdas = rbind(hypo_lamdas,obs_lambda)
+  },mcmc_list)
+}
+

@@ -2,30 +2,30 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 getLeslie <- function(Surv, Fec, SRB) {
-    .Call(`_ReDDLeslie_getLeslie`, Surv, Fec, SRB)
+    .Call(`_ReCAP_getLeslie`, Surv, Fec, SRB)
 }
 
 ProjectHarvestCpp <- function(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage) {
-    .Call(`_ReDDLeslie_ProjectHarvestCpp`, Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
+    .Call(`_ReCAP_ProjectHarvestCpp`, Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
 }
 
 getAerialCount <- function(Harv, H, A) {
-    .Call(`_ReDDLeslie_getAerialCount`, Harv, H, A)
+    .Call(`_ReCAP_getAerialCount`, Harv, H, A)
 }
 
-get_obs_LambdasA <- function(Ae, A) {
-    .Call(`_ReDDLeslie_get_obs_LambdasA`, Ae, A)
+get_obs_LambdasA <- function(Ae, Ae_det) {
+    .Call(`_ReCAP_get_obs_LambdasA`, Ae, Ae_det)
 }
 
 get_hypo_Lambdas_helper <- function(Harv_n, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1) {
-    .Call(`_ReDDLeslie_get_hypo_Lambdas_helper`, Harv_n, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1)
+    .Call(`_ReCAP_get_hypo_Lambdas_helper`, Harv_n, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1)
 }
 
 get_hypo_Lambdas <- function(Harvest, Harvpar, Surv, Fec, SRB) {
-    .Call(`_ReDDLeslie_get_hypo_Lambdas`, Harvest, Harvpar, Surv, Fec, SRB)
+    .Call(`_ReCAP_get_hypo_Lambdas`, Harvest, Harvpar, Surv, Fec, SRB)
 }
 
 eyes <- function(n) {
-    .Call(`_ReDDLeslie_eyes`, n)
+    .Call(`_ReCAP_eyes`, n)
 }
 

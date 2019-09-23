@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // getLeslie
 arma::mat getLeslie(const arma::mat& Surv, const arma::mat& Fec, const double& SRB);
-RcppExport SEXP _ReDDLeslie_getLeslie(SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP) {
+RcppExport SEXP _ReCAP_getLeslie(SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -21,7 +21,7 @@ END_RCPP
 }
 // ProjectHarvestCpp
 arma::mat ProjectHarvestCpp(const arma::mat& Surv, const arma::mat& Harvpar, const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl, const int& period, const IntegerVector& nage);
-RcppExport SEXP _ReDDLeslie_ProjectHarvestCpp(SEXP SurvSEXP, SEXP HarvparSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP, SEXP blSEXP, SEXP periodSEXP, SEXP nageSEXP) {
+RcppExport SEXP _ReCAP_ProjectHarvestCpp(SEXP SurvSEXP, SEXP HarvparSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP, SEXP blSEXP, SEXP periodSEXP, SEXP nageSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -41,7 +41,7 @@ END_RCPP
 }
 // getAerialCount
 arma::mat getAerialCount(const arma::mat& Harv, const arma::mat& H, const arma::mat& A);
-RcppExport SEXP _ReDDLeslie_getAerialCount(SEXP HarvSEXP, SEXP HSEXP, SEXP ASEXP) {
+RcppExport SEXP _ReCAP_getAerialCount(SEXP HarvSEXP, SEXP HSEXP, SEXP ASEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -53,20 +53,20 @@ BEGIN_RCPP
 END_RCPP
 }
 // get_obs_LambdasA
-arma::mat get_obs_LambdasA(const arma::mat& Ae, const arma::mat& A);
-RcppExport SEXP _ReDDLeslie_get_obs_LambdasA(SEXP AeSEXP, SEXP ASEXP) {
+arma::mat get_obs_LambdasA(const arma::mat& Ae, const arma::mat& Ae_det);
+RcppExport SEXP _ReCAP_get_obs_LambdasA(SEXP AeSEXP, SEXP Ae_detSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type Ae(AeSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
-    rcpp_result_gen = Rcpp::wrap(get_obs_LambdasA(Ae, A));
+    Rcpp::traits::input_parameter< const arma::mat& >::type Ae_det(Ae_detSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_obs_LambdasA(Ae, Ae_det));
     return rcpp_result_gen;
 END_RCPP
 }
 // get_hypo_Lambdas_helper
 arma::mat get_hypo_Lambdas_helper(const arma::mat& Harv_n, const arma::mat& H_n, const arma::mat& Surv_np1, const arma::mat& Fec_np1, const double& SRB_np1, const arma::mat& H_np1);
-RcppExport SEXP _ReDDLeslie_get_hypo_Lambdas_helper(SEXP Harv_nSEXP, SEXP H_nSEXP, SEXP Surv_np1SEXP, SEXP Fec_np1SEXP, SEXP SRB_np1SEXP, SEXP H_np1SEXP) {
+RcppExport SEXP _ReCAP_get_hypo_Lambdas_helper(SEXP Harv_nSEXP, SEXP H_nSEXP, SEXP Surv_np1SEXP, SEXP Fec_np1SEXP, SEXP SRB_np1SEXP, SEXP H_np1SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -82,7 +82,7 @@ END_RCPP
 }
 // get_hypo_Lambdas
 arma::mat get_hypo_Lambdas(const arma::mat& Harvest, const arma::mat& Harvpar, const arma::mat& Surv, const arma::mat& Fec, const arma::mat& SRB);
-RcppExport SEXP _ReDDLeslie_get_hypo_Lambdas(SEXP HarvestSEXP, SEXP HarvparSEXP, SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP) {
+RcppExport SEXP _ReCAP_get_hypo_Lambdas(SEXP HarvestSEXP, SEXP HarvparSEXP, SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -97,7 +97,7 @@ END_RCPP
 }
 // eyes
 arma::mat eyes(const int& n);
-RcppExport SEXP _ReDDLeslie_eyes(SEXP nSEXP) {
+RcppExport SEXP _ReCAP_eyes(SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -108,17 +108,17 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_ReDDLeslie_getLeslie", (DL_FUNC) &_ReDDLeslie_getLeslie, 3},
-    {"_ReDDLeslie_ProjectHarvestCpp", (DL_FUNC) &_ReDDLeslie_ProjectHarvestCpp, 10},
-    {"_ReDDLeslie_getAerialCount", (DL_FUNC) &_ReDDLeslie_getAerialCount, 3},
-    {"_ReDDLeslie_get_obs_LambdasA", (DL_FUNC) &_ReDDLeslie_get_obs_LambdasA, 2},
-    {"_ReDDLeslie_get_hypo_Lambdas_helper", (DL_FUNC) &_ReDDLeslie_get_hypo_Lambdas_helper, 6},
-    {"_ReDDLeslie_get_hypo_Lambdas", (DL_FUNC) &_ReDDLeslie_get_hypo_Lambdas, 5},
-    {"_ReDDLeslie_eyes", (DL_FUNC) &_ReDDLeslie_eyes, 1},
+    {"_ReCAP_getLeslie", (DL_FUNC) &_ReCAP_getLeslie, 3},
+    {"_ReCAP_ProjectHarvestCpp", (DL_FUNC) &_ReCAP_ProjectHarvestCpp, 10},
+    {"_ReCAP_getAerialCount", (DL_FUNC) &_ReCAP_getAerialCount, 3},
+    {"_ReCAP_get_obs_LambdasA", (DL_FUNC) &_ReCAP_get_obs_LambdasA, 2},
+    {"_ReCAP_get_hypo_Lambdas_helper", (DL_FUNC) &_ReCAP_get_hypo_Lambdas_helper, 6},
+    {"_ReCAP_get_hypo_Lambdas", (DL_FUNC) &_ReCAP_get_hypo_Lambdas, 5},
+    {"_ReCAP_eyes", (DL_FUNC) &_ReCAP_eyes, 1},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_ReDDLeslie(DllInfo *dll) {
+RcppExport void R_init_ReCAP(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

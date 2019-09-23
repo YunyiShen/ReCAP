@@ -1,7 +1,7 @@
 ### --------------------------- SAMPLER --------------------------- ###
 ### --------------------------------------------------------------- ### hardest part is coming
 
-DDLeslie_sampler =
+ReCAP_sampler =
         function( Harv.data
                          , Aerial.data
                          , nage

@@ -1,14 +1,14 @@
-\name{DDLeslie_sampler}
-\alias{DDLeslie_sampler}
+\name{ReCAP_sampler}
+\alias{ReCAP_sampler}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Integrated Population Model for Harvesting and Aerial Counting data under Bayesian Framework
 }
 \description{
-Main sampler of the posterior distribution of vital rates and harvest count in \code{ReDDLeslie}.
+Main sampler of the posterior distribution of vital rates and harvest count in \code{ReCAP}.
 }
 \usage{
-DDLeslie_sampler(Harv.data, Aerial.data
+ReCAP_sampler(Harv.data, Aerial.data
 , nage, mean.f, mean.s
 , mean.SRB, mean.H
 , mean.A, mean.b = Harv.data[, 1]
@@ -199,7 +199,7 @@ A list with length 7:
 \examples{
 ##Use our Chicago Deer data.
 set.seed(42)
-DDLeslie_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
+ReCAP_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
     ,ChicagoDeerdata$nage,ChicagoDeerdata$mean.f,ChicagoDeerdata$mean.s
     ,ChicagoDeerdata$mean.SRB,ChicagoDeerdata$mean.H,ChicagoDeerdata$mean.A
     ,n.iter = 50,burn.in = 50,thin.by = 1
@@ -213,7 +213,7 @@ DDLeslie_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
 
 mean.H.full <- ChicagoDeerdata$Assumptions$Harv$age \%*\% as.matrix( ChicagoDeerdata$mean.H) \%*\% ChicagoDeerdata$Assumptions$Harv$time
 set.seed(42)
-DDLeslie_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
+ReCAP_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
     ,ChicagoDeerdata$nage,ChicagoDeerdata$mean.f,ChicagoDeerdata$mean.s
     ,ChicagoDeerdata$mean.SRB,mean.H.full,ChicagoDeerdata$mean.A
     ,n.iter = 50,burn.in = 50,thin.by = 1
