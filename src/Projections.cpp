@@ -2,7 +2,6 @@
 #include <RcppArmadillo.h>
 #include <climits>
 #include <complex>
-//#include<lapacke.h>
 using namespace Rcpp;
 
 ///get Leslie matrix from survival etc.
@@ -90,7 +89,6 @@ arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
   arma::mat living = (1/H_n-1) % Harv_n;
   arma::mat Leslie_np1 =  getLeslie(Surv_np1,Fec_np1,SRB_np1);
   // eigen problem, possible lambda
-  //arma::Col<std::complex<double>> eigens = eig_gen(Leslie_np1);
 
   //max intrinsic
   res.row(0).col(0) = max(sum(Leslie_np1));
@@ -99,7 +97,7 @@ arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
   avg_age_str.rows(0,Fec_np1.n_rows-1) = 0.5 * 1/(Fec_np1.n_rows);
   avg_age_str.rows(Fec_np1.n_rows,Surv_np1.n_rows-1) = 0.5 * 1/(Surv_np1.n_rows-Fec_np1.n_rows);
   //even age structure
-  res.row(1).col(0) = mean(sum(Leslie_np1));
+  res.row(1).col(0) = sum(Leslie_np1 % avg_age_str);// uniform age structure, assuming 1 to 1 sex ratio
   //stable intrinsic
   res.row(2).col(0) = real(max((eig_gen(Leslie_np1))));// get the intrinsic one
 
@@ -108,10 +106,8 @@ arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
   res.row(3).col(0) = sum(Leslie_np1 * living)/sum(living);
 
   //min intrinsic
-  res.row(4).col(0) = min(sum(Leslie_np1));
+  res.row(4).col(0) = min(sum(Leslie_np1));// basically when population are all female fawns.
 
-  // lambda w/ harvest
-  //res.row(3).col(0) = sum(H_np1 % (Leslie_np1 * living))/sum(living);
   return(res);
 
 }
@@ -138,5 +134,3 @@ arma::mat eyes(const int& n){
   I.eye(n,n);
   return(I);
 }
-
-

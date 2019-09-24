@@ -1,5 +1,5 @@
 ### --------------------------- SAMPLER --------------------------- ###
-### --------------------------------------------------------------- ### hardest part is coming
+### --------------------------------------------------------------- ### 
 
 ReCAP_sampler =
         function( Harv.data
@@ -428,7 +428,6 @@ ReCAP_sampler =
                                              ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
 
-# stop checking here 10/25/2018
         ## -------- Begin loop ------- ##
         #...............................#
 
@@ -446,7 +445,6 @@ ReCAP_sampler =
         cat("done\n")
         cat("Start sampling...\n")
         for(i in 1:(n.iter + burn.in)) {
-             #if(i %% 100==0) cat("Iteration #",i,"out of",n.iter + burn.in,"total\n")
             svMisc::progress(((i-1)/(n.iter + burn.in))*100,progress.bar = T)
             # k is the index into the storage objects
             k = (i - burn.in - 1) / thin.by + 1
@@ -499,7 +497,6 @@ ReCAP_sampler =
                     prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
 
                     # - Calculate log posterior of proposed vital under projection
-                    ## shit again so many parameters to pass here... really hard to read...
 
                     log.prop.posterior =
                             log.post(f = log.prop.f #=- use proposal
@@ -586,7 +583,6 @@ ReCAP_sampler =
             for(j in 1:length(logit.curr.s)) {
 
                 #.. make a matrix conformable w rate matrix
-                ## TEST 10/26/2018, propble occur, logit.prop.s.mat is almost all 0
                 ##     this is a strange structure inherite from popReconstruct
                 ##     the logit.prop.s.mat renew every loop, do not know why they do this.
                 logit.prop.s.mat =
@@ -726,11 +722,6 @@ ReCAP_sampler =
 
             #.. cycle through components
             for(j in 1:length(logit.curr.SRB)) {
-
-                #.. make a matrix conformable w rate matrix
-                ## TEST 10/26/2018, propble occur, logit.prop.s.mat is almost all 0
-                ##     this is a strange structure inherite from popReconstruct
-                ##     the logit.prop.s.mat renew every loop, do not know why they do this.
                 logit.prop.SRB.mat =
                         matrix(0, nrow = nrow(logit.curr.SRB)
                                      ,ncol = ncol(logit.curr.SRB)) # this result depends on whether time-homo assumed.
@@ -982,9 +973,7 @@ ReCAP_sampler =
             #.. Store proposed Harvest proportion matrix
             if(k %% 1 == 0 && k > 0) H.mcmc[k,] = as.vector(invlogit(logit.curr.H))
 
-
-                # add Aerial count here
-        if(verb && identical(i%%1000, 0)) cat("\n", i, " Aerial Counts Detection")
+            if(verb && identical(i%%1000, 0)) cat("\n", i, " Aerial Counts Detection")
 
             # - Proposal
 
@@ -1112,7 +1101,6 @@ ReCAP_sampler =
                 for(w in 1:length(curr.aK0[[j]])){
                     prop.aK0 = curr.aK0
                     prop.aK0[[j]][w] = curr.aK0[[j]][w] + rnorm(1, 0, sqrt(prop.vars$aK0[[j]]))
-                    #prop.aK0[[2]] = curr.aK0[[2]] + rnorm(length(curr.aK0[[2]]), 0, sqrt(prop.vars$aK0[[2]]))
 
                     logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
                     log.curr.f.full = Fec_assump$age %*% log.curr.f %*% Fec_assump$time
@@ -1792,7 +1780,7 @@ ReCAP_sampler =
         #...............................#
     cat("\n","done","\n","model checking...")
     # calculate DIC
-    mcmc.objs = list(surv.prop.mcmc = surv.prop.mcmc
+    mcmc.objs = list(survival.mcmc = surv.prop.mcmc
                      ,SRB.mcmc = SRB.mcmc
                      ,aerial.detection.mcmc = A.mcmc
                      ,H.mcmc = H.mcmc
@@ -1815,26 +1803,15 @@ ReCAP_sampler =
     }
     else {mean.vital$invK0.mcmc = c(0,0)}
     if(estFec){
-        mcmc.objs$fert.rate.mcmc = fert.rate.mcmc
-        mean.vital$fert.rate.mcmc = apply( as.matrix( fert.rate.mcmc),2,point.est)
+        mcmc.objs$fecundity.mcmc = fert.rate.mcmc
+        mean.vital$fecundity.mcmc = apply( as.matrix( fert.rate.mcmc),2,point.est)
     }
-    else{mean.vital$fert.rate.mcmc = start.f}
+    else{mean.vital$fecundity.mcmc = start.f}
 
-                logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
-                log.curr.f.full = Fec_assump$age %*% log.curr.f %*% Fec_assump$time
-                logit.curr.H.full = Harv_assump$age %*% logit.curr.H %*%Harv_assump$time
-                logit.curr.SRB.full = SRB_assump$age %*% logit.curr.SRB %*%SRB_assump$time
-                logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
-
-
-    #pD_Spie02 = -2 * mean(log.like.mcmc) + 2 * log_likelihood_mean
     pD_Gelman04 = 2 * var(log.like.mcmc)
-    #DIC_Spie02 = -2* mean(log.like.mcmc) - 2 * (pD_Spie02)
     DIC_Gelman04 = -2* mean(log.like.mcmc) + (pD_Gelman04)
-    DIC = list(#pD_Spie02,DIC_Spie02,
-               pD_Gelman04,DIC_Gelman04)
-    names(DIC) = c(#"pD_Spie02","DIC_Spie02",
-                   "pD_Gelman04","DIC_Gelman04")
+    DIC = list(pD_Gelman04,DIC_Gelman04)
+    names(DIC) = c("pD_Gelman04","DIC_Gelman04")
 
     ## abs_dif
     abs_dif = abs(c((mean.vital$baseline.count.mcmc) * (Harv_assump$age%*%(matrix(mean.vital$H.mcmc,ncol = proj.periods+1))%*%Harv_assump$time)[,1],mean.vital$harvest.mcmc)-as.vector(Harv.data))
@@ -1867,8 +1844,8 @@ ReCAP_sampler =
 
         #cat("inital values", "\n\n")
         #.. initial values
-        start.vals = list(fert.rate = start.f
-                          ,surv.prop = start.s
+        start.vals = list(fecundity= start.f
+                          ,survrvival = start.s
                           ,SRB = start.SRB
                           ,H = start.H
                           ,Aerial.detection = start.A
@@ -1885,10 +1862,10 @@ ReCAP_sampler =
                           ,Aerial.data = Aerial.data)
 
         #.. fixed parameters
-        fixed.params = list(alpha.fert.rate = al.f
-                           ,beta.fert.rate = be.f
-                           ,alpha.surv.prop = al.s
-                           ,beta.surv.prop = be.s
+        fixed.params = list(alpha.fecundity = al.f
+                           ,beta.fecundity = be.f
+                           ,alpha.survival = al.s
+                           ,beta.survival = be.s
                            ,alpha.SRB = al.SRB
                            ,beta.SRB = be.SRB
                            ,alpha.aerial.det = al.A
@@ -1911,8 +1888,6 @@ ReCAP_sampler =
                            ,point.est = point.est)
 
 
-
-        #cat("algorithm statistics", "\n\n")
         #.. algorithm statistics
         alg.stats =
                 list(acceptance.proportions = acc.count
@@ -1922,11 +1897,10 @@ ReCAP_sampler =
                          ,run.time = proc.time() - ptm
                          )
 
-        #cat("algorithm parameters", "\n\n")
         #.. algorithm parameters
         alg.params = list(prop.vars = prop.vars
-                                       ,vital.transformations = list(fert.rate = "log"
-                                       ,surv.prob = "logit",SRB = "logit",aerial.detection="logit", H = "logit", invK0="identical"
+                                       ,vital.transformations = list(fecundity = "log"
+                                       ,survival = "logit",SRB = "logit",aerial.detection="logit", H = "logit", invK0="identical"
                                        ,baseline.count = "log"
                                        ,harvest.count = "id"
                                        ,aerial.count = "id")

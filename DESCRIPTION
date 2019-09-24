@@ -1,13 +1,13 @@
 Package: ReCAP
 Type: Package
 Title: Reconstruct Culling and Aerial count of Population
-Version: 0.1.0
-Author: Y. Shen, D. Etter
-Maintainer: Y. Shen <yshen99@wisc.edu>
-Description: Used in DDLeslieReconstruct.
+Version: 0.1.1
+Author: Y. Shen, D. Etter and T. Van Deelen
+Maintainer: Yunyi Shen <yshen99@wisc.edu>
+Description: Proto type of this package.
 License: GPL
 Encoding: UTF-8
 LazyData: true
 Imports: svMisc
-Depends: RcppArmadillo, Rcpp, coda
+Depends: RcppArmadillo, Rcpp(>= 0.11.0), coda
 LinkingTo: Rcpp, RcppArmadillo
