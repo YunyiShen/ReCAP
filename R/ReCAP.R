@@ -158,10 +158,16 @@ ReCAP_sampler =
         colnames(log.like.mcmc) = NULL
 
             # lx
-            # this is current culling beside baseline year
+            # this is current culling
+        living.mcmc = mcmc(matrix(nrow = n.stored
+                                  ,ncol = nrow(start.b) * (proj.periods+1))
+                           ,start = burn.in + 1
+                           ,thin = thin.by
+        )
+        colnames(living.mcmc) = NULL
             lx.mcmc =
                     mcmc(matrix(nrow = n.stored
-                             ,ncol = nrow(start.b) * (proj.periods))
+                             ,ncol = nrow(start.b) * (proj.periods+1))
                              ,start = burn.in + 1
                              ,thin = thin.by
                              )
@@ -1765,10 +1771,14 @@ ReCAP_sampler =
                 full.proj = (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
                 full.aeri = getAerialCount( Harv = full.proj,H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full))
+
+                full.living = (1-invlogit(logit.curr.H.full))*full.proj/(invlogit(logit.curr.H.full))
+
                 if(k %% 1 == 0 && k > 0){
                     lx.mcmc[k,] =
-                    as.vector(full.proj)[-(1:ncol(baseline.count.mcmc))] # to delete all age class' baseline count, because of as.vector,thus need to do like this
+                    as.vector(full.proj) # to delete all age class' baseline count, because of as.vector,thus need to do like this
                     ae.mcmc[k,] = as.vector(full.aeri)
+                    living.mcmc[k,] = as.vector(full.living)
                     log.like.mcmc[k,] =log.lhood(n.census = Harv.data,n.hat = (full.proj)) +log.lhood(n.census = Aerial.data,n.hat = (full.aeri))
                 }
 
@@ -1784,6 +1794,7 @@ ReCAP_sampler =
                      ,SRB.mcmc = SRB.mcmc
                      ,aerial.detection.mcmc = A.mcmc
                      ,H.mcmc = H.mcmc
+                     ,living.mcmc = living.mcmc
 
                      ,baseline.count.mcmc = baseline.count.mcmc
                      ,harvest.mcmc = lx.mcmc
@@ -1814,7 +1825,7 @@ ReCAP_sampler =
     names(DIC) = c("pD_Gelman04","DIC_Gelman04")
 
     ## abs_dif
-    abs_dif = abs(c((mean.vital$baseline.count.mcmc) * (Harv_assump$age%*%(matrix(mean.vital$H.mcmc,ncol = proj.periods+1))%*%Harv_assump$time)[,1],mean.vital$harvest.mcmc)-as.vector(Harv.data))
+    abs_dif = abs(mean.vital$harvest.mcmc-as.vector(Harv.data))
     mean_abs_dif_harv = mean(abs_dif)
     se_abs_dif_harv = sd(abs_dif)/(sqrt(proj.periods))
 

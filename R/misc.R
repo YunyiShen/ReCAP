@@ -248,12 +248,12 @@ getListmcmc_full = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   Assumptions = Check_assumptions(Assumptions,nage,n_proj)
   lapply(1:nsample,function(i,mcmc_obj,nage_female,nage_total,Assumptions){
     temp = lapply(mcmc_obj,function(obj,i){obj[i,]},i=i)
-    temp$surv.prop.mcmc = Assumptions$Surv$age %*% matrix(temp$survival.mcmc,nrow = ncol(Assumptions$Surv$age)) %*% Assumptions$Surv$time
+    temp$survival.mcmc = Assumptions$Surv$age %*% matrix(temp$survival.mcmc,nrow = ncol(Assumptions$Surv$age)) %*% Assumptions$Surv$time
     temp$SRB.mcmc = Assumptions$SRB$age %*% matrix(temp$SRB.mcmc,nrow = ncol(Assumptions$SRB$age)) %*% Assumptions$SRB$time
     temp$aerial.detection.mcmc = Assumptions$AerialDet$age %*% matrix(temp$aerial.detection.mcmc,nrow = ncol(Assumptions$AerialDet$age)) %*% Assumptions$AerialDet$time
     temp$H.mcmc = Assumptions$Harv$age %*% matrix(temp$H.mcmc,nrow = ncol(Assumptions$Harv$age)) %*% Assumptions$Harv$time
-    temp$fert.rate.mcmc = Assumptions$Fec$age %*% matrix(temp$fecundity.mcmc,nrow = ncol(Assumptions$Fec$age)) %*% Assumptions$Fec$time
-    temp$harvest.mcmc = cbind(temp$baseline.count.mcmc, matrix(temp$harvest.mcmc,ncol = n_proj) )
+    temp$fecundity.mcmc = Assumptions$Fec$age %*% matrix(temp$fecundity.mcmc,nrow = ncol(Assumptions$Fec$age)) %*% Assumptions$Fec$time
+    temp$harvest.mcmc =  matrix(temp$harvest.mcmc,ncol = n_proj+1)
     temp$aerial.count.mcmc = matrix(temp$aerial.count.mcmc,ncol = n_proj+1)
     return(temp)
   } , mcmc_obj,nage[1],sum(nage),Assumptions)
@@ -264,7 +264,7 @@ analysisLambda = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
   res = lapply(1:length(mcmc_list),function(i,mcmc_list){
     temp = mcmc_list[[i]]
-    hypo_lambdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$H.mcmc,temp$surv.prop.mcmc,temp$fert.rate.mcmc,temp$SRB.mcmc)
+    hypo_lambdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$H.mcmc,temp$survival.mcmc,temp$fecundity.mcmc,temp$SRB.mcmc)
     obs_lambda = get_obs_LambdasA(temp$aerial.count.mcmc,temp$aerial.detection.mcmc)
     lambdas = rbind(hypo_lambdas,obs_lambda)
 	  row.names(lambdas) = c("maximum","uniform_age","stable_age","no_harvest","minimum","observed")
