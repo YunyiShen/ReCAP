@@ -8,6 +8,6 @@ Description: Proto type of this package.
 License: GPL
 Encoding: UTF-8
 LazyData: true
-Imports: svMisc
+Imports: svMisc, ggplot2
 Depends: RcppArmadillo, Rcpp(>= 0.11.0), coda
 LinkingTo: Rcpp, RcppArmadillo

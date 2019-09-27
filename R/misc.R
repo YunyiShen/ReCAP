@@ -64,6 +64,9 @@ Check_data = function(data_in,nage,nperiod){
 	return(errs)
 }
 
+ProjectHarvest = function(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T){
+	ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
+}
 
 ########
 # Coming functions are
@@ -238,9 +241,7 @@ HarvestSen = function(Fec,Surv,SRB,Harvpar,nage,Harv_assump){
         return(H_Sen)
 }
 
-ProjectHarvest = function(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T){
-	ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
-}
+
 
 getListmcmc_full = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   nsample = nrow(mcmc_obj[[1]])
@@ -261,11 +262,57 @@ getListmcmc_full = function(mcmc_obj,Assumptions = list(),nage,n_proj){
 ## analysis Lambda, only work for no aK0 settings.
 analysisLambda = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
-  lapply(1:length(mcmc_list),function(i,mcmc_list){
+  res = lapply(1:length(mcmc_list),function(i,mcmc_list){
     temp = mcmc_list[[i]]
-    hypo_lamdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$H.mcmc,temp$surv.prop.mcmc,temp$fert.rate.mcmc,temp$SRB.mcmc)
+    hypo_lambdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$H.mcmc,temp$surv.prop.mcmc,temp$fert.rate.mcmc,temp$SRB.mcmc)
     obs_lambda = get_obs_LambdasA(temp$aerial.count.mcmc,temp$aerial.detection.mcmc)
-    lambdas = rbind(hypo_lamdas,obs_lambda)
+    lambdas = rbind(hypo_lambdas,obs_lambda)
+	row.names(lambdas) = c("maximum","uniform_age","stable_age","no_harvest","minimum","observed")
   },mcmc_list)
+  class(res) = "ReCAP_lambda"
+  return(res)
+}
+
+
+plot.ReCAP_lambda = function(ReCAP_lambda_obj,start_year=1,alpha = .05){
+	mean_lambda = Reduce("+",ReCAP_lambda_obj)/(length(ReCAP_lambda_obj))
+	nyear = ncol(mean_lambda)
+	list_each_lambda = lapply(1:length(mean_lambda),function(i,ReCAP_lambda_obj1){
+		temp = lapply(ReCAP_lambda_obj1,function(ana,i){ana[i]},i)
+		Reduce(rbind,temp)
+	},ReCAP_lambda_obj)
+	lower_025 = sapply(list_each_lambda,quantile,probs = alpha/2)
+	lower_025 = matrix(lower_025,ncol=nyear)
+	higher_975 = sapply(list_each_lambda,quantile,probs = 1-alpha/2)
+	higher_975 = matrix(higher_975,ncol=nyear)
+
+	year = 1:nyear + start_year
+	observed = data.frame(point = "observed (w/ harvest)"
+                      ,lambda=mean_lambda[6,]
+                      ,low = lower_025[6,]
+                      ,high = higher_975[6,]
+                      ,year = year)
+	even = data.frame(point = "uniform age structure"
+                      ,lambda=mean_lambda[2,]
+                      ,low = lower_025[2,]
+                      ,high = higher_975[2,]
+                      ,year = year)
+	nocull = data.frame(point = "skip culling"
+                      ,lambda=mean_lambda[4,]
+                      ,low = lower_025[4,]
+                      ,high = higher_975[4,]
+                      ,year = year)
+	stable = data.frame(point = "stable age structure"
+                    ,lambda=mean_lambda[3,]
+                    ,low = lower_025[3,]
+                    ,high = higher_975[3,]
+                    ,year = year)
+	plot_data = rbind(observed,even,nocull,stable)
+	ggplot2::ggplot(data = plot_data,aes(x=year,y=lambda,color=point))+
+		geom_line()+
+		geom_point() +
+		geom_errorbar(aes(ymin=low, ymax=high), width=.1) +
+		labs(y = "Lambda   X(t+1)/X(t)")
+	
 }
 

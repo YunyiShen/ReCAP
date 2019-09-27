@@ -94,10 +94,11 @@ arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
   res.row(0).col(0) = max(sum(Leslie_np1));
 
   arma::mat avg_age_str(H_n.n_rows,1);
-  avg_age_str.rows(0,Fec_np1.n_rows-1) = 0.5 * 1/(Fec_np1.n_rows);
-  avg_age_str.rows(Fec_np1.n_rows,Surv_np1.n_rows-1) = 0.5 * 1/(Surv_np1.n_rows-Fec_np1.n_rows);
+  avg_age_str.ones();
+  avg_age_str.rows(0,Fec_np1.n_rows-1) = (0.5 * 1/(Fec_np1.n_rows)) * avg_age_str.rows(0,Fec_np1.n_rows-1);
+  avg_age_str.rows(Fec_np1.n_rows,Surv_np1.n_rows-1) = (0.5 * 1/(Surv_np1.n_rows-Fec_np1.n_rows)) * avg_age_str.rows(Fec_np1.n_rows,Surv_np1.n_rows-1);
   //even age structure
-  res.row(1).col(0) = sum(Leslie_np1 % avg_age_str);// uniform age structure, assuming 1 to 1 sex ratio
+  res.row(1).col(0) = sum(Leslie_np1 * avg_age_str);// uniform age structure, assuming 1 to 1 sex ratio
   //stable intrinsic
   res.row(2).col(0) = real(max((eig_gen(Leslie_np1))));// get the intrinsic one
 

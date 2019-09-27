@@ -3,6 +3,7 @@ importFrom("stats", "dnorm", "dpois", "dunif", "rgamma", "rnorm","runif", "sd", 
 import(Rcpp)
 import(coda)
 import(svMisc)
+import(ggplot2)
 useDynLib(ReCAP, .registration = TRUE)
 export(ReCAP_sampler)
 export(analysisLambda)
