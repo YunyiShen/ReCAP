@@ -41,6 +41,7 @@ A Leslie matrix
 }
 \author{
 %%  ~~who you are~~
+Yunyi Shen
 }
 \note{
 %%  ~~further notes~~

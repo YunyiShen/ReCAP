@@ -2,7 +2,7 @@
 \alias{ProjectHarvest}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Project harvest matrix using vital rates
+Project Harvest Matrix Using Vital Rates
 }
 \description{
 %%  ~~ A concise (1-5 lines) description of what the function does. ~~
@@ -58,6 +58,7 @@ ProjectHarvest(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0, n
 }
 \author{
 %%  ~~who you are~~
+Yunyi Shen
 }
 \note{
 %%  ~~further notes~~

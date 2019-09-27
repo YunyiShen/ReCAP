@@ -1,5 +1,5 @@
 ### --------------------------- SAMPLER --------------------------- ###
-### --------------------------------------------------------------- ### 
+### --------------------------------------------------------------- ###
 
 ReCAP_sampler =
         function( Harv.data
@@ -57,7 +57,7 @@ ReCAP_sampler =
         mean.s = as.matrix( mean.s)
         mean.SRB = as.matrix( mean.SRB)
         mean.b = as.matrix( mean.b)
-        mean.H = as.matrix( mean.H)     
+        mean.H = as.matrix( mean.H)
         mean.A = as.matrix( mean.A)
         Harv.data = as.matrix(Harv.data)
         Aerial.data = as.matrix(Aerial.data)
@@ -1124,7 +1124,7 @@ ReCAP_sampler =
                                         pop.negative$surv.prop[j] =
                                                 pop.negative$surv.prop[j] + 1/n.iter
                                 }
-                        } 
+                        }
                      else {
 
                                 prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
@@ -1240,7 +1240,7 @@ ReCAP_sampler =
 
 
 
-                
+
                 full.proj =(ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full), SRB = invlogit(logit.curr.SRB.full),Fec=exp(log.curr.f.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.prop.b)    #=- use proposal
                                 , period = proj.periods, nage = nage))
 
@@ -1784,7 +1784,7 @@ ReCAP_sampler =
                      ,SRB.mcmc = SRB.mcmc
                      ,aerial.detection.mcmc = A.mcmc
                      ,H.mcmc = H.mcmc
-                     
+
                      ,baseline.count.mcmc = baseline.count.mcmc
                      ,harvest.mcmc = lx.mcmc
                      ,aerial.count.mcmc = ae.mcmc
@@ -1920,6 +1920,7 @@ ReCAP_sampler =
                          ,fixed.params = fixed.params
                          ,start.vals = start.vals
                          ,alg.params = alg.params)
+        class(ret.list) = "ReCAP_sample"
         cat("done \n","all done \n")
         return(ret.list)
 }

@@ -186,6 +186,7 @@ A list with length 7:
 }
 \author{
 %%  ~~who you are~~
+Yunyi Shen
 }
 \note{
 %%  ~~further notes~~

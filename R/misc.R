@@ -248,11 +248,11 @@ getListmcmc_full = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   Assumptions = Check_assumptions(Assumptions,nage,n_proj)
   lapply(1:nsample,function(i,mcmc_obj,nage_female,nage_total,Assumptions){
     temp = lapply(mcmc_obj,function(obj,i){obj[i,]},i=i)
-    temp$surv.prop.mcmc = Assumptions$Surv$age %*% matrix(temp$surv.prop.mcmc,nrow = ncol(Assumptions$Surv$age)) %*% Assumptions$Surv$time
+    temp$surv.prop.mcmc = Assumptions$Surv$age %*% matrix(temp$survival.mcmc,nrow = ncol(Assumptions$Surv$age)) %*% Assumptions$Surv$time
     temp$SRB.mcmc = Assumptions$SRB$age %*% matrix(temp$SRB.mcmc,nrow = ncol(Assumptions$SRB$age)) %*% Assumptions$SRB$time
     temp$aerial.detection.mcmc = Assumptions$AerialDet$age %*% matrix(temp$aerial.detection.mcmc,nrow = ncol(Assumptions$AerialDet$age)) %*% Assumptions$AerialDet$time
     temp$H.mcmc = Assumptions$Harv$age %*% matrix(temp$H.mcmc,nrow = ncol(Assumptions$Harv$age)) %*% Assumptions$Harv$time
-    temp$fert.rate.mcmc = Assumptions$Fec$age %*% matrix(temp$fert.rate.mcmc,nrow = ncol(Assumptions$Fec$age)) %*% Assumptions$Fec$time
+    temp$fert.rate.mcmc = Assumptions$Fec$age %*% matrix(temp$fecundity.mcmc,nrow = ncol(Assumptions$Fec$age)) %*% Assumptions$Fec$time
     temp$harvest.mcmc = cbind(temp$baseline.count.mcmc, matrix(temp$harvest.mcmc,ncol = n_proj) )
     temp$aerial.count.mcmc = matrix(temp$aerial.count.mcmc,ncol = n_proj+1)
     return(temp)
@@ -267,12 +267,16 @@ analysisLambda = function(mcmc_obj,Assumptions = list(),nage,n_proj){
     hypo_lambdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$H.mcmc,temp$surv.prop.mcmc,temp$fert.rate.mcmc,temp$SRB.mcmc)
     obs_lambda = get_obs_LambdasA(temp$aerial.count.mcmc,temp$aerial.detection.mcmc)
     lambdas = rbind(hypo_lambdas,obs_lambda)
-	row.names(lambdas) = c("maximum","uniform_age","stable_age","no_harvest","minimum","observed")
+	  row.names(lambdas) = c("maximum","uniform_age","stable_age","no_harvest","minimum","observed")
+	  return(lambdas)
   },mcmc_list)
   class(res) = "ReCAP_lambda"
   return(res)
 }
 
+summary.ReCAP_sample=function(ReCAP_sample){
+  ReCAP_sample$model.checking
+}
 
 plot.ReCAP_lambda = function(ReCAP_lambda_obj,start_year=1,alpha = .05){
 	mean_lambda = Reduce("+",ReCAP_lambda_obj)/(length(ReCAP_lambda_obj))
@@ -313,6 +317,6 @@ plot.ReCAP_lambda = function(ReCAP_lambda_obj,start_year=1,alpha = .05){
 		geom_point() +
 		geom_errorbar(aes(ymin=low, ymax=high), width=.1) +
 		labs(y = "Lambda   X(t+1)/X(t)")
-	
+
 }
 

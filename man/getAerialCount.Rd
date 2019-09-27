@@ -32,7 +32,7 @@ A 1 by p matrix with p=period=ncol(Harv), contains expacted post-harvest aerial 
 %% ~put references to the literature/web site here ~
 }
 \author{
-%%  ~~who you are~~
+Yunyi Shen
 }
 \note{
 %%  ~~further notes~~
