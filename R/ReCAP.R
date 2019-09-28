@@ -319,12 +319,12 @@ ReCAP_sampler =
         #.. Set current vitals and variances to inital values
         #     Take logs/logits here where required
         if(estFec){
-            log.curr.f = log(start.f)    #=- log(0) stored as "-Inf". Gets
+            log.curr.f = log(start.f)    #<- log(0) stored as "-Inf". Gets
             log.prop.f = log(start.f)    #        converted to 0 under exponentiation
 
         }
         else{
-            log.curr.f =    (!estFec)*log(start.f) #=- log(0) stored as "-Inf". Gets
+            log.curr.f =    (!estFec)*log(start.f) #<- log(0) stored as "-Inf". Gets
             log.prop.f =    (!estFec)*log(start.f) #        converted to 0 under exponentiation
         }
         logit.curr.s = logitf(start.s)
@@ -486,7 +486,7 @@ ReCAP_sampler =
                             assump[[i]] %*% aK0[[i]]
                 },aK0 = curr.aK0,assump = aK0_assump)
 
-                full.proj =(ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.prop.f.full)#=- use proposal
+                full.proj =(ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.prop.f.full)#<- use proposal
                                 , SRB = invlogit(logit.curr.SRB.full)
                                 , aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
@@ -505,7 +505,7 @@ ReCAP_sampler =
                     # - Calculate log posterior of proposed vital under projection
 
                     log.prop.posterior =
-                            log.post(f = log.prop.f #=- use proposal
+                            log.post(f = log.prop.f #<- use proposal
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
@@ -537,11 +537,11 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#=- use proposal
+                                                                ,n.hat = full.proj#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = prop.aeri#=- use proposal
+                                                                ,n.hat = prop.aeri#<- use proposal
                                                             )
                                              ,non.zero.fert = fert.rows
                                              )
@@ -624,7 +624,7 @@ ReCAP_sampler =
 
 
                         full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.prop.s.full)#=- use proposal
+                                (ProjectHarvest(Surv = invlogit(logit.prop.s.full)#<- use proposal
                                 , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
@@ -641,7 +641,7 @@ ReCAP_sampler =
                         # - Calculate log posterior of proposed vital under projection
                         log.prop.posterior =
                             log.post(f = log.curr.f
-                                             ,s = logit.prop.s #=- use proposal
+                                             ,s = logit.prop.s #<- use proposal
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
@@ -674,11 +674,11 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#=- use proposal
+                                                                ,n.hat = full.proj#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = prop.aeri#=- use proposal
+                                                                ,n.hat = prop.aeri#<- use proposal
                                                             )
                                              ,non.zero.fert = fert.rows
                                              )
@@ -763,7 +763,7 @@ ReCAP_sampler =
 
                         full.proj =
                                 (ProjectHarvest(Surv = invlogit(logit.curr.s.full)
-                                , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.prop.SRB.full)#=- use proposal
+                                , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.prop.SRB.full)#<- use proposal
                                 , aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
@@ -781,7 +781,7 @@ ReCAP_sampler =
                         log.prop.posterior =
                             log.post(f = log.curr.f
                                              ,s = logit.curr.s
-                                             ,SRB = logit.prop.SRB #=- use proposal
+                                             ,SRB = logit.prop.SRB #<- use proposal
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
@@ -813,11 +813,11 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#=- use proposal
+                                                                ,n.hat = full.proj#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = prop.aeri#=- use proposal
+                                                                ,n.hat = prop.aeri#<- use proposal
                                                             )
                                              ,non.zero.fert = fert.rows
                                              )
@@ -890,7 +890,7 @@ ReCAP_sampler =
 
 
                         full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar =( invlogit(logit.prop.H.full))#=- use proposal
+                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar =( invlogit(logit.prop.H.full))#<- use proposal
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
@@ -910,7 +910,7 @@ ReCAP_sampler =
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
-                                             ,H = logit.prop.H #=- use proposal
+                                             ,H = logit.prop.H #<- use proposal
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
                                              ,estFec=estFec, estaK0=estaK0
@@ -940,11 +940,11 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#=- use proposal
+                                                                ,n.hat = full.proj#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = prop.aeri#=- use proposal
+                                                                ,n.hat = prop.aeri#<- use proposal
                                                             )
                                              ,non.zero.fert = fert.rows
                                              )
@@ -1022,14 +1022,14 @@ ReCAP_sampler =
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.prop.A.full))) #=- use proposal
+                                prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.prop.A.full))) #<- use proposal
 
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
                             log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
-                                             ,A = logit.prop.A #=- use proposal
+                                             ,A = logit.prop.A #<- use proposal
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
                                              ,baseline.n = exp( log.curr.b )
@@ -1060,11 +1060,11 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#=- use proposal
+                                                                ,n.hat = full.proj#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = prop.aeri#=- use proposal
+                                                                ,n.hat = prop.aeri#<- use proposal
                                                             )
                                              ,non.zero.fert = fert.rows
                                              )
@@ -1142,7 +1142,7 @@ ReCAP_sampler =
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
-                                             ,aK0 = prop.aK0 #=- use proposal
+                                             ,aK0 = prop.aK0 #<- use proposal
                                              ,baseline.n = exp( log.curr.b )
                                              ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
@@ -1171,11 +1171,11 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#=- use proposal
+                                                                ,n.hat = full.proj#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = prop.aeri#=- use proposal
+                                                                ,n.hat = prop.aeri#<- use proposal
                                                             )
                                              ,non.zero.fert = fert.rows
                                              )
@@ -1247,7 +1247,7 @@ ReCAP_sampler =
 
 
 
-                full.proj =(ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full), SRB = invlogit(logit.curr.SRB.full),Fec=exp(log.curr.f.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.prop.b)    #=- use proposal
+                full.proj =(ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full), SRB = invlogit(logit.curr.SRB.full),Fec=exp(log.curr.f.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.prop.b)    #<- use proposal
                                 , period = proj.periods, nage = nage))
 
 
@@ -1269,7 +1269,7 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.prop.b ) #=- use proposal
+                                             ,baseline.n = exp( log.prop.b ) #<- use proposal
                                              ,estFec=estFec, estaK0=estaK0
                                              ,prior.mean.f = log.mean.f
                                              ,prior.mean.s = logit.mean.s
@@ -1297,11 +1297,11 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#=- use proposal
+                                                                ,n.hat = full.proj#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = prop.aeri#=- use proposal
+                                                                ,n.hat = prop.aeri#<- use proposal
                                                             )
                                              ,non.zero.fert = fert.rows
                                              )
@@ -1374,7 +1374,7 @@ ReCAP_sampler =
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
-                                             ,sigmasq.f = prop.sigmasq.f #=- use proposal
+                                             ,sigmasq.f = prop.sigmasq.f #<- use proposal
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
                                              ,sigmasq.A = curr.sigmasq.A
@@ -1385,12 +1385,12 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#=- use current
-                                                                ) +#=- use current
+                                                                ,n.hat = curr.proj#<- use current
+                                                                ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = curr.aeri#=- use current
-                                                                )#=- use current
+                                                                ,n.hat = curr.aeri#<- use current
+                                                                )#<- use current
                                              ,non.zero.fert = fert.rows
                                              )
 
@@ -1458,7 +1458,7 @@ ReCAP_sampler =
 
 
                                              ,sigmasq.f = curr.sigmasq.f
-                                             ,sigmasq.s = prop.sigmasq.s #=- use proposal
+                                             ,sigmasq.s = prop.sigmasq.s #<- use proposal
                                              ,sigmasq.SRB = curr.sigmasq.SRB
                                              ,sigmasq.A = curr.sigmasq.A
                                              ,sigmasq.H = curr.sigmasq.H
@@ -1468,12 +1468,12 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#=- use current
-                                                                ) +#=- use current
+                                                                ,n.hat = curr.proj#<- use current
+                                                                ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = curr.aeri#=- use current
-                                                                )#=- use current
+                                                                ,n.hat = curr.aeri#<- use current
+                                                                )#<- use current
                                              ,non.zero.fert = fert.rows
                                              )
                 #pause here 20190520 during adding aerial count
@@ -1541,7 +1541,7 @@ ReCAP_sampler =
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
-                                             ,sigmasq.SRB = prop.sigmasq.SRB #=- use proposal
+                                             ,sigmasq.SRB = prop.sigmasq.SRB #<- use proposal
                                              ,sigmasq.A = curr.sigmasq.A
                                              ,sigmasq.H = curr.sigmasq.H
 
@@ -1550,12 +1550,12 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#=- use current
-                                                                ) +#=- use current
+                                                                ,n.hat = curr.proj#<- use current
+                                                                ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = curr.aeri#=- use current
-                                                                )#=- use current
+                                                                ,n.hat = curr.aeri#<- use current
+                                                                )#<- use current
                                              ,non.zero.fert = fert.rows
                                              )
 
@@ -1625,7 +1625,7 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = prop.sigmasq.A #=- use proposal
+                                             ,sigmasq.A = prop.sigmasq.A #<- use proposal
                                              ,sigmasq.H = curr.sigmasq.H
 
 
@@ -1633,12 +1633,12 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#=- use current
-                                                                ) +#=- use current
+                                                                ,n.hat = curr.proj#<- use current
+                                                                ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = curr.aeri#=- use current
-                                                                )#=- use current
+                                                                ,n.hat = curr.aeri#<- use current
+                                                                )#<- use current
                                              ,non.zero.fert = fert.rows
                                              )
 
@@ -1709,19 +1709,19 @@ ReCAP_sampler =
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
                                              ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = prop.sigmasq.H #=- use proposal
+                                             ,sigmasq.H = prop.sigmasq.H #<- use proposal
 
 
 
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#=- use current
-                                                                ) +#=- use current
+                                                                ,n.hat = curr.proj#<- use current
+                                                                ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = curr.aeri#=- use current
-                                                                )#=- use current
+                                                                ,n.hat = curr.aeri#<- use current
+                                                                )#<- use current
                                              ,non.zero.fert = fert.rows
                                              )
 
