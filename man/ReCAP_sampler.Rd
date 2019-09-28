@@ -39,14 +39,13 @@ Aerial count data, should be only one row and same number of columns with harves
   \item{nage}{
 Number of age classes, female first.
 }
-  \item{mean.f}{
-Best estimation of fecundity. Number of rows and columns should be less than harvest, after multiply by Assumptions matrices (see \code{Assumptions}), a full fecundity matrix (i.e. assign fecundity for each age class in each projection year) should have one column less and same number of rows with harvest data(one less year interval). Default input (i.e. no specific Assumptions matrix) should be a full fecundity matrix by itself, i.e.:
+  \item{mean.f,mean.s}{
+Best estimation of fecundity/survival. Number of rows and columns should be less than harvest, after multiply by Assumptions matrices (see \code{Assumptions}), a full fecundity matrix (i.e. assign fecundity for each age class in each projection year) should have one column less and same number of rows with harvest data(one less year interval). Default input (i.e. no specific Assumptions matrix) should be a full fecundity matrix by itself, i.e.:
 
 \code{nrow(mean.f) == nrow(Harv.data) & ncol(mean.f)==ncol(Harv.data)-1}.
+\code{nrow(mean.s) == nrow(Harv.data) & ncol(mean.s)==ncol(Harv.data)-1}.
 }
-  \item{mean.s}{
-Similar to mean.f, for survival.
-}
+
   \item{mean.SRB}{
 Similar to mean.f, sex ratio at birth, but note SRB is assumed having no age structure. Thus a full SRB matrix should only have one row.
 }
@@ -68,49 +67,24 @@ Burn in iteration.
   \item{thin.by}{
 Sample thined by?
 }
-  \item{al.f}{
-Hyperparameter for prior distribution of fecundity's variance. Variance of vital rates v beside aK0 follow inverse Gamma distribution with parameter al.v and be.v, v can be fecundity, survival, harvest rate, aerial count detection rate and SRB.
+  \item{al.f,al.s,al.SRB,al.H,al.A}{
+Hyperparameter for prior distribution of fecundity/survival/SRB/Harvest rate/Aerial Detection Rate's variance. Variance of vital rates v beside aK0 follow inverse Gamma distribution with parameter al.v and be.v, v can be fecundity, survival, harvest rate, aerial count detection rate and SRB.
 }
-  \item{be.f}{
-Hyperparameter for fecundity.
+  \item{be.f,be.s,be.SRB,be.H,be.A}{
+Hyperparameter for prior distribution of fecundity/survival/SRB/Harvest rate/Aerial Detection Rate's variance. Variance of vital rates v beside aK0 follow inverse Gamma distribution with parameter al.v and be.v, v can be fecundity, survival, harvest rate, aerial count detection rate and SRB.
 }
-  \item{al.s}{
-Similar to al.f, for survival.
-}
-  \item{be.s}{
-Similar to be.f, for srvival.
-}
-  \item{al.SRB}{
-Similar, for SRB.
-}
-  \item{be.SRB}{
-Similar, for SRB.
-}
-  \item{min.aK0}{
+
+  \item{min.aK0,max.aK0}{
 Prior distribution of aK0s. If fit density dependent Leslie matrix model:
 
-fecundity(Population) = (1 - aK0 [[1]] * (Population - aK0[[3]])) * Fec
+\code{fecundity(Population) = (1 - aK0 [[1]] * (Population - aK0[[3]])) * Fec}
 
-survival(Population) = (1 - aK0[[2]] * (Population - aK0[[3]])) * Surv
+\code{survival(Population) = (1 - aK0[[2]] * (Population - aK0[[3]])) * Surv}
 In which fecundity is a function of population and Fec and Surv is fecundity and survival at population aK0[[3]]
 
 aK0's component were assumed to be uniformly distributed with parameter min.aK0 and max.aK0.
 }
-  \item{max.aK0}{
-Prior distribution of aK0s.
-}
-  \item{al.H}{
-Similar to al.f, for harvest rate.
-}
-  \item{be.H}{
-Similar to be.f, for harvest rate.
-}
-  \item{al.A}{
-Similar, for aerial count detection rate
-}
-  \item{be.A}{
-Similar, for aerial count detection rate
-}
+
   \item{Assumptions}{
 Should be a list, each element is a list and named Fec, Surv, SRB, Harv, AerialDet, aK0 for fecundity, Survival, SRB, Harvest rate, Aerial count detection rate, and linear coeffient of Density Dependency.
 

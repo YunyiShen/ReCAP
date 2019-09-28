@@ -56,7 +56,7 @@ ReCAP_sample = ReCAP_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
 
 analysisoflambda = analysisLambda(ReCAP_sample$mcmc.objs,ChicagoDeerdata$Assumptions,ChicagoDeerdata$nage,ChicagoDeerdata$proj.periods)
 
-plot(analysisoflambda)
+plot_ReCAP_lambda(analysisoflambda)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

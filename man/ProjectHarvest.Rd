@@ -2,7 +2,7 @@
 \alias{ProjectHarvest}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Project Harvest Matrix Using Vital Rates
+Project Harvest Using Vital Rates
 }
 \description{
 %%  ~~ A concise (1-5 lines) description of what the function does. ~~
@@ -12,35 +12,24 @@ ProjectHarvest(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0, n
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{Surv}{
-%%     ~~Describe \code{Surv} here~~
-}
-  \item{Harvpar}{
-%%     ~~Describe \code{Harvpar} here~~
-}
-  \item{Fec}{
-%%     ~~Describe \code{Fec} here~~
-}
-  \item{SRB}{
-%%     ~~Describe \code{SRB} here~~
+  \item{Surv,Harvpar,Fec,SRB,aK0}{
+Full sruvival, Harvest, Fecundity, SRB and aK0 matrices.
 }
   \item{bl}{
-%%     ~~Describe \code{bl} here~~
+Baseline harvest to start with
 }
   \item{period}{
-%%     ~~Describe \code{period} here~~
+Number of year to project
 }
   \item{nage}{
-%%     ~~Describe \code{nage} here~~
+Number of age classes, female first.
 }
-  \item{aK0}{
-%%     ~~Describe \code{aK0} here~~
-}
+
   \item{global}{
-%%     ~~Describe \code{global} here~~
+Bool. Whether DD is global
 }
   \item{null}{
-%%     ~~Describe \code{null} here~~
+Bool. DD or not
 }
 }
 \details{
@@ -70,18 +59,16 @@ Yunyi Shen
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+mean.H.full <- ChicagoDeerdata$Assumptions$Harv$age \%*\%
+    as.matrix( ChicagoDeerdata$mean.H) \%*\%
+    ChicagoDeerdata$Assumptions$Harv$time
 
-## The function is currently defined as
-function (Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0,
-    nage[1], 1), matrix(0, sum(nage), 1), matrix(0, 1, 1)), global = T,
-    null = T)
-{
-    ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null,
-        bl, period, nage)
-  }
+ProjectHarvest(as.matrix(ChicagoDeerdata$mean.s)
+    ,mean.H.full,as.matrix(ChicagoDeerdata$mean.f)
+    ,as.matrix(ChicagoDeerdata$mean.SRB)
+    ,matrix(ChicagoDeerdata$Harv.data[,1])
+    ,ChicagoDeerdata$proj.periods
+    ,ChicagoDeerdata$nage)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
