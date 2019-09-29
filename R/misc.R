@@ -274,19 +274,14 @@ analysisLambda = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   return(res)
 }
 
-summary.ReCAP_sample=function(object,...){
-  object$model.checking
-}
 
-plot_ReCAP_lambda = function(x,start_year,alpha){
-  if (missing(start_year)) start_year=1
-  if (missing(alpha)) alpha = .05
-	mean_lambda = Reduce("+",x)/(length(x))
+Lambda_plot = function(ReCAP_lambda_obj,start_year=1,alpha=.05){
+	mean_lambda = Reduce("+",ReCAP_lambda_obj)/(length(ReCAP_lambda_obj))
 	nyear = ncol(mean_lambda)
 	list_each_lambda = lapply(1:length(mean_lambda),function(i,ReCAP_lambda_obj1){
 		temp = lapply(ReCAP_lambda_obj1,function(ana,i){ana[i]},i)
 		Reduce(rbind,temp)
-	},x)
+	},ReCAP_lambda_obj)
 	lower_025 = sapply(list_each_lambda,quantile,probs = alpha/2)
 	lower_025 = matrix(lower_025,ncol=nyear)
 	higher_975 = sapply(list_each_lambda,quantile,probs = 1-alpha/2)

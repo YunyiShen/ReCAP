@@ -48,15 +48,23 @@ Yunyi Shen
 }
 \examples{
 set.seed(42)
-ReCAP_sample = ReCAP_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
-    ,ChicagoDeerdata$nage,ChicagoDeerdata$mean.f,ChicagoDeerdata$mean.s
-    ,ChicagoDeerdata$mean.SRB,ChicagoDeerdata$mean.H,ChicagoDeerdata$mean.A
+ReCAP_sample = ReCAP_sampler(ChicagoDeerdata$Harv.data
+    ,ChicagoDeerdata$Aeri.data
+    ,ChicagoDeerdata$nage
+    ,ChicagoDeerdata$mean.f
+    ,ChicagoDeerdata$mean.s
+    ,ChicagoDeerdata$mean.SRB
+    ,ChicagoDeerdata$mean.H
+    ,ChicagoDeerdata$mean.A
     ,n.iter = 50,burn.in = 5,thin.by = 1
     ,Assumptions = ChicagoDeerdata$Assumptions)
 
-analysisoflambda = analysisLambda(ReCAP_sample$mcmc.objs,ChicagoDeerdata$Assumptions,ChicagoDeerdata$nage,ChicagoDeerdata$proj.periods)
+analysisoflambda = analysisLambda(ReCAP_sample$mcmc.objs
+    ,ChicagoDeerdata$Assumptions
+    ,ChicagoDeerdata$nage
+    ,ChicagoDeerdata$proj.periods)
 
-plot_ReCAP_lambda(analysisoflambda)
+Lambda_plot(analysisoflambda,1992,0.05)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

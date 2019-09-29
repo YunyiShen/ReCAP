@@ -186,7 +186,9 @@ ReCAP_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
 ### and time specific reconstruction of harvest rate together with other vital rates.
 
 
-mean.H.full <- ChicagoDeerdata$Assumptions$Harv$age \%*\% as.matrix( ChicagoDeerdata$mean.H) \%*\% ChicagoDeerdata$Assumptions$Harv$time
+mean.H.full <- ChicagoDeerdata$Assumptions$Harv$age \%*\%
+    as.matrix( ChicagoDeerdata$mean.H) \%*\%
+    ChicagoDeerdata$Assumptions$Harv$time
 set.seed(42)
 ReCAP_sampler(ChicagoDeerdata$Harv.data,ChicagoDeerdata$Aeri.data
     ,ChicagoDeerdata$nage,ChicagoDeerdata$mean.f,ChicagoDeerdata$mean.s

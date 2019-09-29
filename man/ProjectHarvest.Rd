@@ -8,7 +8,12 @@ Project Harvest Using Vital Rates
 %%  ~~ A concise (1-5 lines) description of what the function does. ~~
 }
 \usage{
-ProjectHarvest(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0, nage[1], 1), matrix(0, sum(nage), 1), matrix(0, 1, 1)), global = T, null = T)
+ProjectHarvest(Surv, Harvpar, Fec, SRB
+        , bl, period, nage
+        , aK0 = list(matrix(0, nage[1], 1)
+                , matrix(0, sum(nage), 1)
+                , matrix(0, 1, 1))
+        , global = T, null = T)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
