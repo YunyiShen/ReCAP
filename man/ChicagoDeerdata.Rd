@@ -43,6 +43,6 @@ List of 10
 Etter, Dwayne Robert. Ecology and management of overabundant white-tailed deer from suburban Chicago, Illinois. Diss. University of Illinois at Urbana-Champaign, 2001.
 }
 \examples{
-plot(ChicagoDeerdata$Harv.data[1,]) # fawn harvest
+plot(1992:2006,ChicagoDeerdata$Harv.data[1,]) # fawn harvest
 }
 \keyword{datasets}
