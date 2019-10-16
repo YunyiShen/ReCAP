@@ -5,7 +5,6 @@ ReCAP_sampler =
         function( Harv.data
                          , Aerial.data
                          , nage
-
                          #.. fixed prior means
                          , mean.f, mean.s, mean.SRB, mean.H, mean.A
                          , mean.b=Harv.data[,1]
@@ -61,6 +60,14 @@ ReCAP_sampler =
         mean.A = as.matrix( mean.A)
         Harv.data = as.matrix(Harv.data)
         Aerial.data = as.matrix(Aerial.data)
+
+        missing_harv = which(colSums(Harv.data)==0 |
+                             colSums(is.na(Harv.data))==nrow(Harv.data)) # for missing harvest/skipped year
+
+        missing_aerial = which((Aerial.data)==0 |
+                               is.na(Aerial.data)) # for missing aerial count years 
+		Aerial.data[missing_aerial] = 0 # set it to be 0, since aerial count is non-invasive, we just set detection to be 0 at that year.
+
 
         cat("Checking input dimensions...\n")
 

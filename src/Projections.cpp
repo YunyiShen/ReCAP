@@ -44,6 +44,19 @@ arma::mat ProjectHarvest_helperCpp(const arma::mat& data_n,const arma::mat& Surv
 
 }
 
+arma::mat ProjectHarvest_helper2Cpp(const arma::mat& Living_n1,const arma::mat& Surv, const arma::mat& Fec,const double& SRB, const arma::mat& H_np1,bool global, const List& aK0,const bool & null){
+	arma::mat D_bir = DD(global, Living_n1, aK0[0], aK0[2] ,null);
+	arma::mat D_dea = DD(global, Living_n1, aK0[1], aK0[2] ,null);
+	return(H_np1 % (getLeslie(Surv % D_dea, Fec % D_bir, SRB)*Living_n1));
+}
+
+arma::mat ProjectLiving_helper2Cpp(const arma::mat& Living_n1,const arma::mat& Surv, const arma::mat& Fec,const double& SRB,bool global, const List& aK0,const bool & null){
+	arma::mat D_bir = DD(global, Living_n1, aK0[0], aK0[2] ,null);
+	arma::mat D_dea = DD(global, Living_n1, aK0[1], aK0[2] ,null);
+	return((getLeslie(Surv % D_dea, Fec % D_bir, SRB)*Living_n1));
+}
+
+
 ///main projection function
 //[[Rcpp::export]]
 arma::mat ProjectHarvestCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
@@ -56,10 +69,34 @@ arma::mat ProjectHarvestCpp(const arma::mat& Surv,const arma::mat& Harvpar,const
 	return(Harvest);
 }
 
+
+List ProjectAllCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
+	arma::mat Harvest(sum(nage),period+1); // deal with the case that there is no harvest for a certain year
+	arma::mat Living(sum(nage),period+1);
+	Harvest.col(0) = bl;
+	Living.col(0) = (1/Harvpar.col(0)-1) % bl); // post harvest living individuals
+	for(int i = 1; i<period + 1; i++){
+		if(sum(Harvpar.col(i-1))>0){
+			Harvest.col(i) = ProjectHarvest_helper2Cpp(Living.col(i-1),Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)),Harvpar.col(i),global, aK0,null);
+			Living.col(i) = (1/Harvpar.col(i)-1) % Harvest.col(i));
+		}// if harvested
+		else{
+			Harvest.col(i) = 0*Harvest.col(i-1);// no harvest
+			Living.col(i) = ProjectLiving_helper2Cpp(Living.col(i-1),Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)),global, aK0,null);// solely projection that year
+		}// if not harvested
+	}
+	List res = List::create(Named("Harvest") = Harvest , _["Living"] = Living);
+	return(res);	
+}
+
 ///get Aerial count
 //[[Rcpp::export]]
-arma::mat getAerialCount(const arma::mat& Harv, const arma::mat& H, const arma::mat& A){
+arma::mat getAerialCountPost(const arma::mat& Harv, const arma::mat& H, const arma::mat& A){
   return((sum((1/H-1) % Harv))%A);
+}
+
+arma::mat getAerialCountPre(const arma::mat& Harv, const arma::mat& H, const arma::mat& A){
+  return((sum(Harv/H))%A);
 }
 
 
