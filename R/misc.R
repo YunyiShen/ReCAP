@@ -205,7 +205,7 @@ log.post = function(## estimated vitals
                              #,log.sigmasq.aK0.prior
                              ,log.sigmasq.H.prior
                              ,log.sigmasq.A.prior
-                             ,log.like))
+                             ,log.like,na.rm = T)) # keep NA for missing data, remove NAs
 
 }
 

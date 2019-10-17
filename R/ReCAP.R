@@ -121,12 +121,18 @@ ReCAP_sampler =
         ## How many (samples) stored?
         cat("Preparing...")
         start.f = mean.f
+        start.f[is.na(start.f)] = .5 # for missing data, substitute with what ever number
         start.s = mean.s
+        start.s[is.na(start.s)] = .5
         start.SRB = mean.SRB
+        start.SRB[ is.na( start.SRB)] = .5
         start.b = mean.b
+        start.b[is.na(start.b)] = 5
         start.aK0 = min.aK0
         start.H = mean.H
+        start.H[is.na(start.H)] = .5
         start.A = mean.A
+        start.A[is.na(start.A)] = .5 # Then for mising vital rates observation prior is v \pro 1
         n.stored = ceiling(n.iter / thin.by)
             # Fertility
 
@@ -1354,7 +1360,7 @@ ReCAP_sampler =
 
             ##...... Fertility rate ......##
             if(estFec){ # if not est Fer, this is not needed
-                prop.sigmasq.f = rinvGamma(1, al.f + length(mean.f[fert.rows,])/2,be.f + 0.5*sum((log.curr.f[fert.rows,] -log.mean.f[fert.rows,])^2))
+                prop.sigmasq.f = rinvGamma(1, al.f + length(mean.f[fert.rows,])/2-sum(is.na(mean.f))/2,be.f + 0.5*sum((log.curr.f[fert.rows,] -log.mean.f[fert.rows,])^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
 
@@ -1436,9 +1442,9 @@ ReCAP_sampler =
             ##...... Survival Proportion ......##
 
             prop.sigmasq.s =
-                rinvGamma(1, al.s + length(mean.s)/2,
+                rinvGamma(1, al.s + length(mean.s)/2-sum(is.na(mean.s))/2,
                                     be.s +
-                                        0.5*sum((logit.curr.s - logit.mean.s)^2))
+                                        0.5*sum((logit.curr.s - logit.mean.s)^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
@@ -1520,7 +1526,7 @@ ReCAP_sampler =
 
             ##...... Sex Ratio at Birth ......##
             prop.sigmasq.SRB =
-                rinvGamma(1, al.SRB + length(mean.SRB)/2,be.SRB + 0.5*sum((logit.curr.SRB - logit.mean.SRB)^2))
+                rinvGamma(1, al.SRB + length(mean.SRB)/2-sum(is.na(mean.SRB))/2,be.SRB + 0.5*sum((logit.curr.SRB - logit.mean.SRB)^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
@@ -1601,9 +1607,9 @@ ReCAP_sampler =
 
             ##...... Aerial Count Detection ......## not changed yet
             prop.sigmasq.A =
-                rinvGamma(1, al.A + length(mean.A)/2,
+                rinvGamma(1, al.A + length(mean.A)/2-sum(is.na(mean.A))/2,
                                     be.A +
-                                        0.5*sum((logit.curr.A - logit.mean.A)^2))
+                                        0.5*sum((logit.curr.A - logit.mean.A)^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
@@ -1684,9 +1690,9 @@ ReCAP_sampler =
             ##...... Harvest Proportion ......##
 
             prop.sigmasq.H =
-                rinvGamma(1, al.H + length(logit.mean.H)/2,
+                rinvGamma(1, al.H + length(logit.mean.H)/2-sum(is.na(logit.mean.H))/2,
                                     be.H +
-                                        0.5*sum((logit.curr.H - logit.mean.H)^2))
+                                        0.5*sum((logit.curr.H - logit.mean.H)^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
