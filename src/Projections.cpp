@@ -50,25 +50,30 @@ List ProjectAllCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::ma
 	arma::mat Harvest(sum(nage),period+1); // deal with the case that there is no harvest for a certain year
 	arma::mat Living(sum(nage),period+1);
 	Harvest.col(0) = bl;
-	Living.col(0) = (1/Harvpar.col(0)) % bl); // pre harvest living individuals
+	Living.col(0) = (1/Harvpar.col(0)) % bl; // pre harvest living individuals
 	for(int i = 1; i<period + 1; i++){
-			Living.col(i) = ProjectLiving_helper2Cpp(Living.col(i-1)-Harvest.col(i-1), // post cull population went into reproduction	
+			Living.col(i) = ProjectLiving_helper2Cpp(Living.col(i-1)-Harvest.col(i-1), // post cull population went into reproduction
 													 Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)),global, aK0,null);// pre-cull population of next year
 			Harvest.col(i) = Living.col(i) % Harvpar.col(i); // culling
 	}
 	//List res = List::create(Named["Harvest"] = Harvest , _["Living"] = Living);
-	return(List::create(Named["Harvest"] = Harvest , _["Living"] = Living-Harvest));//	
+	return(Rcpp::List::create(
+	        Rcpp::Named("Harvest") = Harvest ,
+	        Rcpp::Named("Living") = Living-Harvest));//
 }
 
 ///get Aerial count
 //[[Rcpp::export]]
 arma::mat getAerialCountPost(const List& Proj, const arma::mat& A){
-  return(sum(Proj["Living"])%A);
+  arma::mat living = Proj["Living"];
+  return((sum(living))%A);
 }
 ///get Aerial count
 //[[Rcpp::export]]
 arma::mat getAerialCountPre(const List& Proj, const arma::mat& A){
-  return(sum(Proj["Living"]+Proj[Harvest])%A);// 
+    arma::mat living = Proj["Living"];
+    arma::mat harv = Proj["Harvest"];
+    return((sum(living+harv))%A);//
 }
 
 
@@ -81,8 +86,8 @@ arma::mat get_obs_LambdasH(const arma::mat& Harv, const arma::mat& H){
 
 ///get observed lambda (growth rate from Aerial count)
 //[[Rcpp::export]]
-arma::mat get_obs_LambdasA(const arma::mat& Living_total, const arma::mat& Ae_det){
-  return((Living_total.cols(1,Ae.n_cols-1))/(Living_total.cols(0,Ae.n_cols-2))); // Lambdas
+arma::mat get_obs_LambdasA(const arma::mat& Living_total){
+  return((Living_total.cols(1,Living_total.n_cols-1))/(Living_total.cols(0,Living_total.n_cols-2))); // Lambdas
 }
 
 ///get lambda w/, w/o harvest and maximum lambda, single year

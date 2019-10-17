@@ -10,6 +10,5 @@ export(analysisLambda)
 export(Lambda_plot)
 export(getLeslie)
 export(ProjectHarvest)
-export(getAerialCount)
 export(eyes)
 

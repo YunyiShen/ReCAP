@@ -5,24 +5,28 @@ getLeslie <- function(Surv, Fec, SRB) {
     .Call(`_ReCAP_getLeslie`, Surv, Fec, SRB)
 }
 
-ProjectHarvestCpp <- function(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage) {
-    .Call(`_ReCAP_ProjectHarvestCpp`, Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
+ProjectAllCpp <- function(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage) {
+    .Call(`_ReCAP_ProjectAllCpp`, Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
 }
 
-getAerialCount <- function(Harv, H, A) {
-    .Call(`_ReCAP_getAerialCount`, Harv, H, A)
+getAerialCountPost <- function(Proj, A) {
+    .Call(`_ReCAP_getAerialCountPost`, Proj, A)
 }
 
-get_obs_LambdasA <- function(Ae, Ae_det) {
-    .Call(`_ReCAP_get_obs_LambdasA`, Ae, Ae_det)
+getAerialCountPre <- function(Proj, A) {
+    .Call(`_ReCAP_getAerialCountPre`, Proj, A)
 }
 
-get_hypo_Lambdas_helper <- function(Harv_n, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1) {
-    .Call(`_ReCAP_get_hypo_Lambdas_helper`, Harv_n, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1)
+get_obs_LambdasA <- function(Living_total) {
+    .Call(`_ReCAP_get_obs_LambdasA`, Living_total)
 }
 
-get_hypo_Lambdas <- function(Harvest, Harvpar, Surv, Fec, SRB) {
-    .Call(`_ReCAP_get_hypo_Lambdas`, Harvest, Harvpar, Surv, Fec, SRB)
+get_hypo_Lambdas_helper <- function(Harv_n, living, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1) {
+    .Call(`_ReCAP_get_hypo_Lambdas_helper`, Harv_n, living, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1)
+}
+
+get_hypo_Lambdas <- function(Harvest, Living, Harvpar, Surv, Fec, SRB) {
+    .Call(`_ReCAP_get_hypo_Lambdas`, Harvest, Living, Harvpar, Surv, Fec, SRB)
 }
 
 eyes <- function(n) {
