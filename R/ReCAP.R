@@ -65,7 +65,7 @@ ReCAP_sampler =
                              colSums(is.na(Harv.data))==nrow(Harv.data)) # for missing harvest/skipped year
 
         missing_aerial = which((Aerial.data)==0 |
-                               is.na(Aerial.data)) # for missing aerial count years 
+                               is.na(Aerial.data)) # for missing aerial count years
 		Aerial.data[missing_aerial] = 0 # set it to be 0, since aerial count is non-invasive, we just set detection to be 0 at that year.
 
         if(Aerialcount_time=="pre") getAerialCount=getAerialCountPre
@@ -434,7 +434,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj$Harvest$Harvest) +
+                                                                ,n.hat = curr.proj$Harvest) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = curr.aeri
@@ -1266,8 +1266,8 @@ ReCAP_sampler =
                             pop.negative$baseline.count[j] + 1/n.iter
                 }
             } else {
-                log.prop.proj = log(full.proj)
-                prop.aeri = ( getAerialCount( full.proj$Harvest,A = invlogit(logit.curr.A.full)))
+
+                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
 
                 # - Calculate log posterior of proposed vital under projection
                  log.prop.posterior =
@@ -1787,7 +1787,7 @@ ReCAP_sampler =
                     as.vector(full.proj$Harvest) # to delete all age class' baseline count, because of as.vector,thus need to do like this
                     ae.mcmc[k,] = as.vector(full.aeri)
                     living.mcmc[k,] = as.vector(full.proj$Living)
-                    log.like.mcmc[k,] =log.lhood(n.census = Harv.data,n.hat = (full.proj)) +log.lhood(n.census = Aerial.data,n.hat = (full.aeri))
+                    log.like.mcmc[k,] =log.lhood(n.census = Harv.data,n.hat = (full.proj$Harvest)) +log.lhood(n.census = Aerial.data,n.hat = (full.aeri))
                 }
 
                 if(verb && identical(i%%1000, 0)) cat("\n\n")
