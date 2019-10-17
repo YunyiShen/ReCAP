@@ -65,7 +65,7 @@ Check_data = function(data_in,nage,nperiod){
 }
 
 ProjectHarvest = function(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T){
-	ProjectHarvestCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
+	ProjectAllCpp(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
 }
 
 ########
@@ -254,6 +254,7 @@ getListmcmc_full = function(mcmc_obj,Assumptions = list(),nage,n_proj){
     temp$H.mcmc = Assumptions$Harv$age %*% matrix(temp$H.mcmc,nrow = ncol(Assumptions$Harv$age)) %*% Assumptions$Harv$time
     temp$fecundity.mcmc = Assumptions$Fec$age %*% matrix(temp$fecundity.mcmc,nrow = ncol(Assumptions$Fec$age)) %*% Assumptions$Fec$time
     temp$harvest.mcmc =  matrix(temp$harvest.mcmc,ncol = n_proj+1)
+	temp$living.mcmc =  matrix(temp$living.mcmc,ncol = n_proj+1)
     temp$aerial.count.mcmc = matrix(temp$aerial.count.mcmc,ncol = n_proj+1)
     return(temp)
   } , mcmc_obj,nage[1],sum(nage),Assumptions)
@@ -264,8 +265,8 @@ analysisLambda = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
   res = lapply(1:length(mcmc_list),function(i,mcmc_list){
     temp = mcmc_list[[i]]
-    hypo_lambdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$H.mcmc,temp$survival.mcmc,temp$fecundity.mcmc,temp$SRB.mcmc)
-    obs_lambda = get_obs_LambdasA(temp$aerial.count.mcmc,temp$aerial.detection.mcmc)
+    hypo_lambdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$living.mcmc,temp$H.mcmc,temp$survival.mcmc,temp$fecundity.mcmc,temp$SRB.mcmc)
+    obs_lambda = get_obs_LambdasA(temp$living.mcmc)
     lambdas = rbind(hypo_lambdas,obs_lambda)
 	  row.names(lambdas) = c("maximum","uniform_age","stable_age","no_harvest","minimum","observed")
 	  return(lambdas)

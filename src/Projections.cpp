@@ -35,20 +35,7 @@ arma::mat DD(const bool& global, const arma::mat& Xn,const arma::mat & aK0, cons
   return(D);
 }
 
-///Helper function for a single year projection, inner function, export for test.
-arma::mat ProjectHarvest_helperCpp(const arma::mat& data_n,const arma::mat& Surv, const arma::mat& Fec,const double& SRB,const arma::mat& H_n, const arma::mat& H_np1,bool global, const List& aK0,const bool & null){
-	arma::mat X_n1 = (1-H_n) % (data_n/H_n);
-	arma::mat D_bir = DD(global, X_n1, aK0[0], aK0[2] ,null);
-	arma::mat D_dea = DD(global, X_n1, aK0[1], aK0[2] ,null);
-	return(H_np1 % (getLeslie(Surv % D_dea, Fec % D_bir, SRB)*X_n1));
 
-}
-
-arma::mat ProjectHarvest_helper2Cpp(const arma::mat& Living_n1,const arma::mat& Surv, const arma::mat& Fec,const double& SRB, const arma::mat& H_np1,bool global, const List& aK0,const bool & null){
-	arma::mat D_bir = DD(global, Living_n1, aK0[0], aK0[2] ,null);
-	arma::mat D_dea = DD(global, Living_n1, aK0[1], aK0[2] ,null);
-	return(H_np1 % (getLeslie(Surv % D_dea, Fec % D_bir, SRB)*Living_n1));
-}
 
 arma::mat ProjectLiving_helper2Cpp(const arma::mat& Living_n1,const arma::mat& Surv, const arma::mat& Fec,const double& SRB,bool global, const List& aK0,const bool & null){
 	arma::mat D_bir = DD(global, Living_n1, aK0[0], aK0[2] ,null);
@@ -57,46 +44,31 @@ arma::mat ProjectLiving_helper2Cpp(const arma::mat& Living_n1,const arma::mat& S
 }
 
 
-///main projection function
+///main projection function, w/ missing harvest
 //[[Rcpp::export]]
-arma::mat ProjectHarvestCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
-	arma::mat Harvest(sum(nage),period+1);
-	Harvest.col(0) = bl;
-	//E0 = E0/(sum(E0));// need to check whether there is one in R call rather than here.
-	for(int i = 1; i<period + 1; i++){
-		Harvest.col(i) = ProjectHarvest_helperCpp(Harvest.col(i-1),Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)), Harvpar.col(i-1),Harvpar.col(i),global, aK0,null);
-	}
-	return(Harvest);
-}
-
-
 List ProjectAllCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
 	arma::mat Harvest(sum(nage),period+1); // deal with the case that there is no harvest for a certain year
 	arma::mat Living(sum(nage),period+1);
 	Harvest.col(0) = bl;
-	Living.col(0) = (1/Harvpar.col(0)-1) % bl); // post harvest living individuals
+	Living.col(0) = (1/Harvpar.col(0)) % bl); // pre harvest living individuals
 	for(int i = 1; i<period + 1; i++){
-		if(sum(Harvpar.col(i-1))>0){
-			Harvest.col(i) = ProjectHarvest_helper2Cpp(Living.col(i-1),Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)),Harvpar.col(i),global, aK0,null);
-			Living.col(i) = (1/Harvpar.col(i)-1) % Harvest.col(i));
-		}// if harvested
-		else{
-			Harvest.col(i) = 0*Harvest.col(i-1);// no harvest
-			Living.col(i) = ProjectLiving_helper2Cpp(Living.col(i-1),Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)),global, aK0,null);// solely projection that year
-		}// if not harvested
+			Living.col(i) = ProjectLiving_helper2Cpp(Living.col(i-1)-Harvest.col(i-1), // post cull population went into reproduction	
+													 Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)),global, aK0,null);// pre-cull population of next year
+			Harvest.col(i) = Living.col(i) % Harvpar.col(i); // culling
 	}
-	List res = List::create(Named("Harvest") = Harvest , _["Living"] = Living);
-	return(res);	
+	//List res = List::create(Named["Harvest"] = Harvest , _["Living"] = Living);
+	return(List::create(Named["Harvest"] = Harvest , _["Living"] = Living-Harvest));//	
 }
 
 ///get Aerial count
 //[[Rcpp::export]]
-arma::mat getAerialCountPost(const arma::mat& Harv, const arma::mat& H, const arma::mat& A){
-  return((sum((1/H-1) % Harv))%A);
+arma::mat getAerialCountPost(const List& Proj, const arma::mat& A){
+  return(sum(Proj["Living"])%A);
 }
-
-arma::mat getAerialCountPre(const arma::mat& Harv, const arma::mat& H, const arma::mat& A){
-  return((sum(Harv/H))%A);
+///get Aerial count
+//[[Rcpp::export]]
+arma::mat getAerialCountPre(const List& Proj, const arma::mat& A){
+  return(sum(Proj["Living"]+Proj[Harvest])%A);// 
 }
 
 
@@ -109,21 +81,20 @@ arma::mat get_obs_LambdasH(const arma::mat& Harv, const arma::mat& H){
 
 ///get observed lambda (growth rate from Aerial count)
 //[[Rcpp::export]]
-arma::mat get_obs_LambdasA(const arma::mat& Ae, const arma::mat& Ae_det){
-  arma::mat Living_total = Ae/Ae_det;//living individual at all year
+arma::mat get_obs_LambdasA(const arma::mat& Living_total, const arma::mat& Ae_det){
   return((Living_total.cols(1,Ae.n_cols-1))/(Living_total.cols(0,Ae.n_cols-2))); // Lambdas
 }
 
 ///get lambda w/, w/o harvest and maximum lambda, single year
 //[[Rcpp::export]]
 arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
+							  , const arma::mat& living // post cull living individual
                               , const arma::mat& H_n // harvest rate at year n
                               , const arma::mat& Surv_np1 // survival of year n+1
                               , const arma::mat& Fec_np1 // Fecundity of year n+1
                               , const double& SRB_np1 // SRB of year n+1
                               , const arma::mat& H_np1){
   arma::mat res(5,1);
-  arma::mat living = (1/H_n-1) % Harv_n;
   arma::mat Leslie_np1 =  getLeslie(Surv_np1,Fec_np1,SRB_np1);
   // eigen problem, possible lambda
 
@@ -153,6 +124,7 @@ arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
 ///get lambda w/, w/o harvest and maximum lambda, single year
 //[[Rcpp::export]]
 arma::mat get_hypo_Lambdas(const arma::mat& Harvest
+							 , const arma::mat& Living
                              , const arma::mat& Harvpar
                              , const arma::mat& Surv
                              , const arma::mat& Fec
@@ -160,7 +132,7 @@ arma::mat get_hypo_Lambdas(const arma::mat& Harvest
   int periods = Harvest.n_cols-1;
   arma::mat Lambdas(5,periods);
   for(int i=1;i<periods+1;i++){
-    Lambdas.col(i-1)=get_hypo_Lambdas_helper( Harvest.col(i-1) , Harvpar.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , Harvpar.col(i));
+    Lambdas.col(i-1)=get_hypo_Lambdas_helper( Harvest.col(i-1) , Living.col(i-1),Harvpar.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , Harvpar.col(i));
   }
   return(Lambdas);
 }

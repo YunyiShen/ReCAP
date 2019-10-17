@@ -8,7 +8,7 @@ ReCAP_sampler =
                          #.. fixed prior means
                          , mean.f, mean.s, mean.SRB, mean.H, mean.A
                          , mean.b=Harv.data[,1]
-
+                         , Aerialcount_time = "post"
                          ,n.iter=50000, burn.in = 5000, thin.by = 10
 
                          #.. fixed variance hyper-parameters
@@ -68,7 +68,8 @@ ReCAP_sampler =
                                is.na(Aerial.data)) # for missing aerial count years 
 		Aerial.data[missing_aerial] = 0 # set it to be 0, since aerial count is non-invasive, we just set detection to be 0 at that year.
 
-
+        if(Aerialcount_time=="pre") getAerialCount=getAerialCountPre
+        else getAerialCount=getAerialCountPost
         cat("Checking input dimensions...\n")
 
         Assumptions = Check_assumptions(Assumptions, nage, proj.periods)
@@ -392,7 +393,7 @@ ReCAP_sampler =
         curr.proj =
                 (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
-        curr.aeri = ( getAerialCount( Harv = ( curr.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
+        curr.aeri = ( getAerialCount( curr.proj,A = invlogit(logit.curr.A.full)))
 
 
 #.. Current log posterior
@@ -433,7 +434,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj) +
+                                                                ,n.hat = curr.proj$Harvest$Harvest) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = curr.aeri
@@ -499,15 +500,15 @@ ReCAP_sampler =
 
 
 
-                if(sum(full.proj < 0) > 0 || is.na(sum(full.proj))
-                     || is.nan(sum(full.proj))) {
+                if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest))
+                     || is.nan(sum(full.proj$Harvest))) {
                         if(i > burn.in) {
                                 pop.negative$fert.rate[j] =
                                         pop.negative$fert.rate[j] + 1/n.iter
                         }
                 } else {
 
-                    prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
+                    prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
 
                     # - Calculate log posterior of proposed vital under projection
 
@@ -544,7 +545,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#<- use proposal
+                                                                ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -635,15 +636,15 @@ ReCAP_sampler =
                                 , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
-                        if(sum(full.proj < 0) > 0 || is.na(sum(full.proj))
-                             || is.nan(sum(full.proj))) {
+                        if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest))
+                             || is.nan(sum(full.proj$Harvest))) {
                                 if(i > burn.in) {
                                         pop.negative$surv.prop[j] =
                                                 pop.negative$surv.prop[j] + 1/n.iter
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
+                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
 
                         # - Calculate log posterior of proposed vital under projection
                         log.prop.posterior =
@@ -681,7 +682,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#<- use proposal
+                                                                ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -774,15 +775,15 @@ ReCAP_sampler =
                                 , aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
-                        if(sum(full.proj < 0) > 0 || is.na(sum(full.proj))
-                             || is.nan(sum(full.proj))) {
+                        if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest ))
+                             || is.nan(sum(full.proj$Harvest ))) {
                                 if(i > burn.in) {
                                         pop.negative$surv.prop[j] =
                                                 pop.negative$surv.prop[j] + 1/n.iter
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
+                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
 
                         # - Calculate log posterior of proposed vital under projection
                         log.prop.posterior =
@@ -820,7 +821,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#<- use proposal
+                                                                ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -901,15 +902,15 @@ ReCAP_sampler =
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
-                        if(sum(full.proj < 0) > 0 || is.na(sum(full.proj))
-                             || is.nan(sum(full.proj))) {
+                        if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
+                             || is.nan(sum(full.proj$Harvest ))) {
                                 if(i > burn.in) {
                                         pop.negative$surv.prop[j] =
                                                 pop.negative$surv.prop[j] + 1/n.iter
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.prop.H.full),A = invlogit(logit.curr.A.full)))
+                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
 
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
@@ -947,7 +948,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#<- use proposal
+                                                                ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1021,15 +1022,15 @@ ReCAP_sampler =
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
-                        if(sum(full.proj < 0) > 0 || is.na(sum(full.proj))
-                             || is.nan(sum(full.proj))) {
+                        if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
+                             || is.nan(sum(full.proj$Harvest ))) {
                                 if(i > burn.in) {
                                         pop.negative$A[j] =
                                                 pop.negative$A[j] + 1/n.iter
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.prop.A.full))) #<- use proposal
+                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.prop.A.full))) #<- use proposal
 
                 # - Calculate log posterior of proposed vital under projection
                 log.prop.posterior =
@@ -1067,7 +1068,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#<- use proposal
+                                                                ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1131,8 +1132,8 @@ ReCAP_sampler =
                                 , global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
-                     if(sum(full.proj < 0) > 0 || is.na(sum(full.proj))
-                             || is.nan(sum(full.proj))) {
+                     if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
+                             || is.nan(sum(full.proj$Harvest ))) {
                                 if(i > burn.in) {
                                         pop.negative$surv.prop[j] =
                                                 pop.negative$surv.prop[j] + 1/n.iter
@@ -1140,7 +1141,7 @@ ReCAP_sampler =
                         }
                      else {
 
-                                prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
+                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
 
                 # - Calculate log posterior of proposed vital under projection
                     log.prop.posterior =
@@ -1178,7 +1179,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#<- use proposal
+                                                                ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1258,15 +1259,15 @@ ReCAP_sampler =
                                 , period = proj.periods, nage = nage))
 
 
-            if(sum(full.proj < 0) > 0 || is.na(sum(full.proj))
-                 || is.nan(sum(full.proj))) {
+            if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
+                 || is.nan(sum(full.proj$Harvest ))) {
                 if(i > burn.in) {
                     pop.negative$baseline.count[j] =
                             pop.negative$baseline.count[j] + 1/n.iter
                 }
             } else {
                 log.prop.proj = log(full.proj)
-                prop.aeri = ( getAerialCount( Harv = ( full.proj),H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full)))
+                prop.aeri = ( getAerialCount( full.proj$Harvest,A = invlogit(logit.curr.A.full)))
 
                 # - Calculate log posterior of proposed vital under projection
                  log.prop.posterior =
@@ -1304,7 +1305,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = full.proj#<- use proposal
+                                                                ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1392,7 +1393,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#<- use current
+                                                                ,n.hat = curr.proj$Harvest#<- use current
                                                                 ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1475,7 +1476,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#<- use current
+                                                                ,n.hat = curr.proj$Harvest#<- use current
                                                                 ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1557,7 +1558,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#<- use current
+                                                                ,n.hat = curr.proj$Harvest#<- use current
                                                                 ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1640,7 +1641,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#<- use current
+                                                                ,n.hat = curr.proj$Harvest#<- use current
                                                                 ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1723,7 +1724,7 @@ ReCAP_sampler =
                                              ,log.like =
                                                         log.lhood(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj#<- use current
+                                                                ,n.hat = curr.proj$Harvest#<- use current
                                                                 ) +#<- use current
                                                         log.lhood(
                                                                 n.census = Aerial.data
@@ -1777,15 +1778,15 @@ ReCAP_sampler =
 
                 full.proj = (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
-                full.aeri = getAerialCount( Harv = full.proj,H = invlogit(logit.curr.H.full),A = invlogit(logit.curr.A.full))
+                full.aeri = getAerialCount( full.proj,A = invlogit(logit.curr.A.full))
 
-                full.living = (1-invlogit(logit.curr.H.full))*full.proj/(invlogit(logit.curr.H.full))
+                #full.living = (1-invlogit(logit.curr.H.full))*full.proj/(invlogit(logit.curr.H.full))
 
                 if(k %% 1 == 0 && k > 0){
                     lx.mcmc[k,] =
-                    as.vector(full.proj) # to delete all age class' baseline count, because of as.vector,thus need to do like this
+                    as.vector(full.proj$Harvest) # to delete all age class' baseline count, because of as.vector,thus need to do like this
                     ae.mcmc[k,] = as.vector(full.aeri)
-                    living.mcmc[k,] = as.vector(full.living)
+                    living.mcmc[k,] = as.vector(full.proj$Living)
                     log.like.mcmc[k,] =log.lhood(n.census = Harv.data,n.hat = (full.proj)) +log.lhood(n.census = Aerial.data,n.hat = (full.aeri))
                 }
 
