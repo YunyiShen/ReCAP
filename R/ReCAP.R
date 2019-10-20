@@ -6,25 +6,29 @@ ReCAP_sampler =
                          , Aerial.data
                          , nage
                          #.. fixed prior means
-                         , mean.f, mean.s, mean.SRB, mean.H, mean.A
-                         , mean.b=Harv.data[,1]
+                         , measure.f, measure.s, measure.SRB
+                         , prior.mean.f, prior.mean.s, prior.mean.SRB
+                         , prior.var.f, prior.var.s, prior.var.SRB              
+                         , prior.mean.H, prior.mean.A
+                         , prior.var.H = 2, prior.var.A = 2
+                         , measure.b=Harv.data[,1]
                          , Aerialcount_time = "post"
-                         ,n.iter=50000, burn.in = 5000, thin.by = 10
+                         , n.iter=50000, burn.in = 5000, thin.by = 10
 
                          #.. fixed variance hyper-parameters
                          ,al.f = 1, be.f = 0.05, al.s = 1, be.s = 0.1,al.SRB = 1,be.SRB = 0.05
                          , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
                          , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
-                         , al.H = 1, be.H = 0.05, al.A = 1, be.A = 0.05
+                         
                          #.. census data
                          #     *not transformed coming in*
-                         , Assumptions = list()
-
+                         , Assumptions = list() # Assumption matrices
+                         , Designs = list() # Design matrices 
+                         , Observations = list() # observation matrices, row as raw most detailed age, columns as age classes (e.g. fawn, yearling, adults)
+                          
                          #.. inital values for vitals and variances
                          #     *vitals not transformed coming in* all not transfer, will transfer later before sample and transfer back when saving
                          , start.sigmasq.f = .05, start.sigmasq.s = .05, start.sigmasq.SRB = .05
-                         , start.sigmasq.H = .05
-                         , start.sigmasq.A = .05
 
                          #.. **variances** for proposal distributions used in M-H
                          #     steps which update vital rates.
@@ -52,12 +56,10 @@ ReCAP_sampler =
         ## .............. Sampler .............. ##
         ## ..................................... ##
         ## -------- Checking input dimensions ------- ##
-        mean.f = as.matrix( mean.f)
-        mean.s = as.matrix( mean.s)
-        mean.SRB = as.matrix( mean.SRB)
-        mean.b = as.matrix( mean.b)
-        mean.H = as.matrix( mean.H)
-        mean.A = as.matrix( mean.A)
+        measure.f = as.matrix( measure.f)
+        measure.s = as.matrix( measure.s)
+        measure.SRB = as.matrix( measure.SRB)
+        measure.b = as.matrix( measure.b)
         Harv.data = as.matrix(Harv.data)
         Aerial.data = as.matrix(Aerial.data)
 
@@ -71,28 +73,34 @@ ReCAP_sampler =
         if(Aerialcount_time=="pre") getAerialCount=getAerialCountPre
         else getAerialCount=getAerialCountPost
         cat("Checking input dimensions...\n")
-
+        
+        
         Assumptions = Check_assumptions(Assumptions, nage, proj.periods)
         prop.vars = Check_prop_var(prop.vars,nage,proj.periods)
+                
+        Observations = Check_observations(Observations, nage)
         errs_dim = 0
-        cat("  Harvest data:\n")
-        errs_dim = errs_dim + Check_data(Harv.data,sum(nage),proj.periods + 1 )
-        cat("\n  Aerial count data:\n")
-        errs_dim = errs_dim + Check_data(Aerial.data,1,proj.periods + 1)
-        cat("\n  Fecundity:\n")
-        errs_dim = errs_dim + Check_dimensions(mean.f,Assumptions$Fec,nage[1],proj.periods)
-        cat("\n  Survival:\n")
-        errs_dim = errs_dim + Check_dimensions(mean.s,Assumptions$Surv,sum(nage),proj.periods)
-        cat("\n  Sex Ratio at Birth (SRB):\n")
-        errs_dim = errs_dim + Check_dimensions(mean.SRB,Assumptions$SRB,1,proj.periods) # no age structure
-        cat("\n  Harvest rate:\n")
-        errs_dim = errs_dim + Check_dimensions(mean.H,Assumptions$Harv,sum(nage),proj.periods+1)
-        cat("\n  Aerial detection rate:\n")
-        errs_dim = errs_dim + Check_dimensions(mean.A,Assumptions$AerialDet,1,proj.periods+1)  # no age structure, cannot determine
-        cat("\n")
+        cat("  Check Harvest data:\n")
+        Check_data(Harv.data,sum(nage),proj.periods + 1 )
+        cat("\n  Check Aerial count data:\n")
+        Check_data(Aerial.data,1,proj.periods + 1)
+        
+       
+        
+                
+        start.f = random_beta(Designs$Fec, Assumption$Fec, nage,proj.periods)
+        srart.s = random_beta(Designs$Surv, Assumption$Surv,nage,proj.periods)
+        srart.SRB = random_beta(Designs$SRB, Assumption$SRB,nage,proj.periods)
+        srart.H = random_beta(Designs$Harv, Assumption$Harv,nage,proj.periods+1)
+        srart.A = random_beta(Designs$AerialDet, Assumption$AerialDet,nage,proj.periods+1)        
+                
+
+        start.b = measure.b
+        start.b[is.na(start.b)] = 5
+        start.aK0 = min.aK0
+                
 
 
-        if(errs_dim>0) stop(paste(errs_dim,"error(s) in input dimension, see massage above.\n"))
         ## -------- Begin timing ------- ##
         cat("\n")
         ptm = proc.time()
@@ -100,7 +108,7 @@ ReCAP_sampler =
 
         # ## ------- Determine fert.rows --------- ##
 
-        zero.elements = mean.f == 0
+        zero.elements = measure.f == 0
         fert.rows = as.logical(apply(zero.elements, 1, function(z) !all(z)))
 
 
@@ -120,19 +128,7 @@ ReCAP_sampler =
 
         ## How many (samples) stored?
         cat("Preparing...")
-        start.f = mean.f
-        start.f[is.na(start.f)] = .5 # for missing data, substitute with what ever number
-        start.s = mean.s
-        start.s[is.na(start.s)] = .5
-        start.SRB = mean.SRB
-        start.SRB[ is.na( start.SRB)] = .5
-        start.b = mean.b
-        start.b[is.na(start.b)] = 5
-        start.aK0 = min.aK0
-        start.H = mean.H
-        start.H[is.na(start.H)] = .5
-        start.A = mean.A
-        start.A[is.na(start.A)] = .5 # Then for mising vital rates observation prior is v \pro 1
+
         n.stored = ceiling(n.iter / thin.by)
             # Fertility
 
@@ -245,45 +241,41 @@ ReCAP_sampler =
 
             # variances
             variances.mcmc =
-                    mcmc(matrix(nrow = n.stored, ncol = 5)
+                    mcmc(matrix(nrow = n.stored, ncol = 3)
                              ,start = burn.in + 1
                              ,thin = thin.by)
             colnames(variances.mcmc) =
-                    c("fert.rate.var", "surv.prop.var", "SRB.var","H.var", "A.var"
-                        ) # may need check here since K0 and fert can be known (though I prefer estimating it)
+                    c("fert.rate.var", "surv.prop.var", "SRB.var") 
 
         #.. Record acceptance rate
 
         acc.count =
-                list(fert.rate = matrix(0, nrow = nrow(as.matrix( mean.f[fert.rows,]))
-                         ,ncol = ncol(as.matrix( mean.f[fert.rows,]))
-                         ,dimnames = dimnames(( mean.f[fert.rows,]))
+                list(fert.rate = matrix(0, nrow = nrow(as.matrix( measure.f[fert.rows,]))
+                         ,ncol = ncol(as.matrix( measure.f[fert.rows,]))
+                         ,dimnames = dimnames(( measure.f[fert.rows,]))
                          )
-                         ,surv.prop = matrix(0, nrow = nrow(as.matrix( mean.s))
-                            ,ncol = ncol(as.matrix( mean.s))
-                            ,dimnames = dimnames(mean.s)
+                         ,surv.prop = matrix(0, nrow = nrow(as.matrix( measure.s))
+                            ,ncol = ncol(as.matrix( measure.s))
+                            ,dimnames = dimnames(measure.s)
                             )
-                         ,SRB = matrix(0, nrow = nrow(as.matrix( mean.SRB))
-                            ,ncol = ncol(as.matrix( mean.SRB))
-                            ,dimnames = dimnames(mean.SRB))
-                         ,A = matrix(0, nrow = nrow(as.matrix(mean.A)), ncol = ncol(as.matrix( mean.A))
-                            ,dimnames = dimnames(mean.A)
+                         ,SRB = matrix(0, nrow = nrow(as.matrix( measure.SRB))
+                            ,ncol = ncol(as.matrix( measure.SRB))
+                            ,dimnames = dimnames(measure.SRB))
+                         ,A = matrix(0, nrow = nrow(as.matrix(prior.mean.A)), ncol = ncol(as.matrix( prior.mean.A))
+                            ,dimnames = dimnames(prior.mean.A)
                             )
-                         ,H = matrix(0, nrow = nrow(as.matrix(mean.H)), ncol = ncol(as.matrix( mean.H))
-                            ,dimnames = dimnames(mean.H)
+                         ,H = matrix(0, nrow = nrow(as.matrix(prior.mean.H)), ncol = ncol(as.matrix( prior.mean.H))
+                            ,dimnames = dimnames(prior.mean.H)
                             )
                          ,aK0 = matrix(0, nrow = nrow(as.matrix( start.aK0)), ncol = ncol( as.matrix(start.aK0))
                             ,dimnames = dimnames(start.aK0)
                             )
-                         ,baseline.count = matrix(0, nrow = nrow(as.matrix( mean.b))
-                            ,dimnames = dimnames( mean.b)
+                         ,baseline.count = matrix(0, nrow = nrow(as.matrix( measure.b))
+                            ,dimnames = dimnames( measure.b)
                             )
                          ,sigmasq.f = 0
                          ,sigmasq.s = 0
                          ,sigmasq.SRB = 0
-                         ,sigmasq.A = 0
-                         ,sigmasq.H = 0
-                         #,sigmasq.aK0 = 0
 
                          )
 
@@ -296,36 +288,36 @@ ReCAP_sampler =
         #.. Count how often projection gives negative population
 
         pop.negative =
-                list(fert.rate = matrix(0, nrow = nrow(as.matrix( mean.f[fert.rows,]))
-                         ,ncol = ncol(as.matrix( mean.f[fert.rows,]))
-                         ,dimnames = dimnames(( mean.f[fert.rows,]))
+                list(fert.rate = matrix(0, nrow = nrow(as.matrix( measure.f[fert.rows,]))
+                         ,ncol = ncol(as.matrix( measure.f[fert.rows,]))
+                         ,dimnames = dimnames(( measure.f[fert.rows,]))
                          )
-                         ,surv.prop = matrix(0, nrow = nrow(as.matrix( mean.s))
-                            ,ncol = ncol(as.matrix( mean.s))
-                            ,dimnames = dimnames(mean.s)
+                         ,surv.prop = matrix(0, nrow = nrow(as.matrix( measure.s))
+                            ,ncol = ncol(as.matrix( measure.s))
+                            ,dimnames = dimnames(measure.s)
                             )
-                         ,SRB = matrix(0, nrow = nrow(as.matrix( mean.SRB))
-                            ,ncol = ncol(as.matrix( mean.SRB)))
-                            ,dimnames = dimnames(mean.SRB)
-                         ,A = matrix(0, nrow = nrow(as.matrix(mean.A)), ncol = ncol(as.matrix( mean.A))
-                            ,dimnames = dimnames(mean.A)
+                         ,SRB = matrix(0, nrow = nrow(as.matrix( measure.SRB))
+                            ,ncol = ncol(as.matrix( measure.SRB)))
+                            ,dimnames = dimnames(measure.SRB)
+                         ,A = matrix(0, nrow = nrow(as.matrix(prior.mean.A)), ncol = ncol(as.matrix( prior.mean.A))
+                            ,dimnames = dimnames(prior.mean.A)
                             )
-                         ,H = matrix(0, nrow = nrow(as.matrix(mean.H)), ncol = ncol(as.matrix( mean.H))
-                            ,dimnames = dimnames(mean.H)
+                         ,H = matrix(0, nrow = nrow(as.matrix(prior.mean.H)), ncol = ncol(as.matrix( prior.mean.H))
+                            ,dimnames = dimnames(prior.mean.H)
                             )
                          ,aK0 = matrix(0, nrow = nrow(as.matrix( start.aK0)), ncol = ncol( as.matrix(start.aK0))
                             ,dimnames = dimnames(start.aK0)
                             )
-                         ,baseline.count = matrix(0, nrow = nrow(as.matrix( mean.b))
-                            ,dimnames = dimnames( mean.b)
+                         ,baseline.count = matrix(0, nrow = nrow(as.matrix( measure.b))
+                            ,dimnames = dimnames( measure.b)
                             )
                          )
 
 
         #.. Count how often surv probs are outside tolerance
 
-        s.out.tol = matrix(0, nrow = nrow(mean.s), ncol = ncol(mean.s)
-                                                ,dimnames = dimnames(mean.s))
+        s.out.tol = matrix(0, nrow = nrow(measure.s), ncol = ncol(measure.s)
+                                                ,dimnames = dimnames(measure.s))
 
         cat("done\n")
         ## -------- Initialize -------- ## Restart here in 10/19/2018
@@ -362,12 +354,17 @@ ReCAP_sampler =
         #.. Fixed means for vitals and baseline
         #     Set these to inputs, take logs where required.
 
-        log.mean.f = log(mean.f)
-        logit.mean.s = logitf(mean.s)
-        logit.mean.SRB = logitf(mean.SRB)
-        logit.mean.A = logitf(mean.A)
-        logit.mean.H = logitf(mean.H)
-        log.mean.b = log(mean.b)
+        log.measure.f = log(measure.f)
+        logit.measure.s = logitf(measure.s)
+        logit.measure.SRB = logitf(measure.SRB)
+                                     
+        log.prior.mean.f = log(prior.mean.f)
+        logit.prior.mean.s = logitf(prior.mean.s)
+        logit.prior.mean.SRB = logitf(prior.mean.SRB)
+        
+        logit.prior.mean.A = logitf(prior.mean.A)
+        logit.prior.mean.H = logitf(prior.mean.H)
+        log.measure.b = log(measure.b)
 
 
         #.. Fixed Harvest data
@@ -399,9 +396,10 @@ ReCAP_sampler =
         curr.proj =
                 (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
-        curr.aeri = ( getAerialCount( curr.proj,A = invlogit(logit.curr.A.full)))
+        curr.aeri = ( getAerialCount( curr.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
 
-
+        log.curr.obs_f = log(getobsVitals(curr.proj$Fec_obs,curr.proj$living,Observations$Fec))
+        logit.curr.obs_s = logitf(getobsVitals(curr.proj$Surv_obs,curr.proj$living,Observations$Surv))
 #.. Current log posterior
 
 
@@ -412,15 +410,21 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -432,19 +436,31 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj$Harvest) +
-                                                        log.lhood(
+                                                                ,n.hat = curr.proj$Harvest
+                                                                ) +
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = curr.aeri
-                                                                ) #　both harvest and aerial count
+                                                                ) +
+                                                        log.lhood_vital(f = log.curr.obs_f
+                                                                        ,s = logit.curr.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
                                              ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
 
@@ -514,26 +530,35 @@ ReCAP_sampler =
                         }
                 } else {
 
-                    prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
+                    prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+
 
                     # - Calculate log posterior of proposed vital under projection
 
-                    log.prop.posterior =
-                            log.post(f = log.prop.f #<- use proposal
+        log.prop.posterior =
+                log.post(f = log.prop.f #<- use proposal
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -541,24 +566,40 @@ ReCAP_sampler =
                                              ,alpha.H = al.H, beta.H = be.H
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
+
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
+
 
 
                                              ,log.like =
-                                                        log.lhood(
-                                                                n.census = Harv.data
+                                                        log.lhood_popu(
+                                                                 n.census = Harv.data
                                                                 ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
-                                                        log.lhood(
-                                                                n.census = Aerial.data
+                                                        log.lhood_popu(
+                                                                 n.census = Aerial.data
                                                                 ,n.hat = prop.aeri#<- use proposal
-                                                            )
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.full.obs_f
+                                                                        ,s = logit.full.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
+
+                        
+                        
                     #- Acceptance ratio
                     ar = acc.ra(log.prop = log.prop.posterior,
                                                          log.current = log.curr.posterior)
@@ -650,25 +691,35 @@ ReCAP_sampler =
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
+                    prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+
 
                         # - Calculate log posterior of proposed vital under projection
-                        log.prop.posterior =
-                            log.post(f = log.curr.f
+                                
+        log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.prop.s #<- use proposal
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -680,22 +731,34 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
                                                                 ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = prop.aeri#<- use proposal
-                                                            )
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.full.obs_f
+                                                                        ,s = logit.full.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
+
 
                         #- Acceptance ratio
                         ar = acc.ra(log.prop = log.prop.posterior,
@@ -789,25 +852,36 @@ ReCAP_sampler =
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
+                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
+                                log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+                                logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+
 
                         # - Calculate log posterior of proposed vital under projection
-                        log.prop.posterior =
-                            log.post(f = log.curr.f
+                           
+                                
+      log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.prop.SRB #<- use proposal
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -819,22 +893,35 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
                                                                 ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = prop.aeri#<- use proposal
-                                                            )
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.full.obs_f
+                                                                        ,s = logit.full.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
+
+
 
                         #- Acceptance ratio
                         ar = acc.ra(log.prop = log.prop.posterior,
@@ -916,25 +1003,35 @@ ReCAP_sampler =
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
+                    prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
 
-                # - Calculate log posterior of proposed vital under projection
-                log.prop.posterior =
-                            log.post(f = log.curr.f
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+
+                
+                                
+        log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.prop.H #<- use proposal
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -946,22 +1043,34 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
                                                                 ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = prop.aeri#<- use proposal
-                                                            )
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.full.obs_f
+                                                                        ,s = logit.full.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
+
 
                 #- Acceptance ratio
                 ar = acc.ra(log.prop = log.prop.posterior,
@@ -1036,25 +1145,34 @@ ReCAP_sampler =
                                 }
                         } else {
 
-                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.prop.A.full))) #<- use proposal
+                    prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.prop.A.full),obsMat = Observations$AerialCount)) #<- use proposal
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
 
-                # - Calculate log posterior of proposed vital under projection
-                log.prop.posterior =
-                            log.post(f = log.curr.f
+
+                                
+        log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.prop.A #<- use proposal
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -1066,23 +1184,38 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
                                                                 ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = prop.aeri#<- use proposal
-                                                            )
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.full.obs_f
+                                                                        ,s = logit.full.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
 
+
+
+                                
+                                
                 #- Acceptance ratio
                 ar = acc.ra(log.prop = log.prop.posterior,
                                                      log.current = log.curr.posterior)
@@ -1147,25 +1280,34 @@ ReCAP_sampler =
                         }
                      else {
 
-                                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
+                    prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
 
-                # - Calculate log posterior of proposed vital under projection
-                    log.prop.posterior =
-                            log.post(         f = log.curr.f
+
+                             
+         log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = prop.aK0 #<- use proposal
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -1177,23 +1319,39 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
                                                                 ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = prop.aeri#<- use proposal
-                                                            )
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.full.obs_f
+                                                                        ,s = logit.full.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+									,estFec = estFec
+									,measure.f = log.measure.f
+									,measure.s = log.measure.s
+									,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
 
+
+
+                            
+                             
+                    
                 #- Acceptance ratio
                 ar = acc.ra(log.prop = log.prop.posterior, log.current = log.curr.posterior)
 
@@ -1273,25 +1431,35 @@ ReCAP_sampler =
                 }
             } else {
 
-                prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full)))
+                    prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+
 
                 # - Calculate log posterior of proposed vital under projection
-                 log.prop.posterior =
-                            log.post(f = log.curr.f
+
+        log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.prop.b ) #<- use proposal
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -1303,25 +1471,40 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
                                                                 ,n.hat = full.proj$Harvest#<- use proposal
                                                                 ) +
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = prop.aeri#<- use proposal
-                                                            )
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.full.obs_f
+                                                                        ,s = logit.full.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
 
 
-                #- Acceptance ratio
+
+                    
+                    
+                    
+                 #- Acceptance ratio
                 ar = acc.ra(log.prop = log.prop.posterior,
                                                      log.current = log.curr.posterior)
 
@@ -1338,7 +1521,7 @@ ReCAP_sampler =
                                         acc.count$baseline.count[j] + 1/n.iter
                                         log.curr.b = log.prop.b
                                         curr.proj = full.proj
-                    curr.aeri = prop.aeri
+                                        curr.aeri = prop.aeri
                                         log.curr.posterior = log.prop.posterior
                         } #.. if reject, leave current fert rates and projections
                         #     alone, store current rate
@@ -1355,31 +1538,39 @@ ReCAP_sampler =
 
 # TEST stop here 10/26/2018
             ## ------- Variance Updates ------- ##
+            log.curr.obs_f = log(getobsVitals(curr.proj$Fec_obs,curr.proj$living,Observations$Fec))
+            logit.curr.obs_s = logitf(getobsVitals(curr.proj$Surv_obs,curr.proj$living,Observations$Surv))
+
 
             if(verb && identical(i%%1000, 0)) cat("\n", i, " Variances")
 
             ##...... Fertility rate ......##
             if(estFec){ # if not est Fer, this is not needed
-                prop.sigmasq.f = rinvGamma(1, al.f + length(mean.f[fert.rows,])/2-sum(is.na(mean.f))/2,be.f + 0.5*sum((log.curr.f[fert.rows,] -log.mean.f[fert.rows,])^2,na.rm = T))
+                prop.sigmasq.f = rinvGamma(1, al.f + length(measure.f[fert.rows,])/2-sum(is.na(measure.f))/2,be.f + 0.5*sum((log.curr.f[fert.rows,] -log.measure.f[fert.rows,])^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
-
-                log.prop.posterior =
-                                            log.post(f = log.curr.f
+        log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -1391,33 +1582,49 @@ ReCAP_sampler =
                                              ,sigmasq.f = prop.sigmasq.f #<- use proposal
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
                                                                 ,n.hat = curr.proj$Harvest#<- use current
-                                                                ) +#<- use current
-                                                        log.lhood(
+                                                                ) +
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = curr.aeri#<- use current
-                                                                )#<- use current
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.curr.obs_f
+                                                                        ,s = log.curr.obs_s
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = prop.sigmasq.f #<- use proposal
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
+
+
+
+
+                    
 
             #- Acceptance ratio
             ar = acc.ra.var(log.prop.post = log.prop.posterior
                                                          ,log.curr.post = log.curr.posterior
                                                          ,log.prop.var = dinvGamma(prop.sigmasq.f
-                                                            ,al.f + length(mean.f[fert.rows,])/2
-                                                            ,be.f + 0.5*sum((log.curr.f[fert.rows,] - log.mean.f[fert.rows,])^2)
+                                                            ,al.f + length(measure.f[fert.rows,])/2
+                                                            ,be.f + 0.5*sum((log.curr.f[fert.rows,] - log.measure.f[fert.rows,])^2)
                                                             ,log = TRUE)
                                                          ,log.curr.var = dinvGamma(curr.sigmasq.f
-                                                            ,al.f + length(mean.f[fert.rows,])/2
-                                                            ,be.f + 0.5*sum((log.curr.f[fert.rows,] - log.mean.f[fert.rows,])^2)
+                                                            ,al.f + length(measure.f[fert.rows,])/2
+                                                            ,be.f + 0.5*sum((log.curr.f[fert.rows,] - log.measure.f[fert.rows,])^2)
                                                             ,log = TRUE)
                                                          )
 
@@ -1442,27 +1649,32 @@ ReCAP_sampler =
             ##...... Survival Proportion ......##
 
             prop.sigmasq.s =
-                rinvGamma(1, al.s + length(mean.s)/2-sum(is.na(mean.s))/2,
+                rinvGamma(1, al.s + length(measure.s)/2-sum(is.na(measure.s))/2,
                                     be.s +
-                                        0.5*sum((logit.curr.s - logit.mean.s)^2,na.rm = T))
-
-                # - Calculate log posterior of proposed vital under projection
-                log.prop.posterior =
-                            log.post(f = log.curr.f
+                                        0.5*sum((logit.curr.s - logit.measure.s)^2,na.rm = T))
+        # - Calculate log posterior of proposed vital under projection
+        log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -1474,34 +1686,44 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = prop.sigmasq.s #<- use proposal
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
                                                                 ,n.hat = curr.proj$Harvest#<- use current
-                                                                ) +#<- use current
-                                                        log.lhood(
+                                                                ) +
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
                                                                 ,n.hat = curr.aeri#<- use current
-                                                                )#<- use current
-                                             ,non.zero.fert = fert.rows
+                                                                ) +
+                                                        log.lhood_vital(f = log.curr.obs_f
+                                                                        ,s = log.curr.obs_s
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = prop.sigmasq.s #<- use proposal
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
-                #pause here 20190520 during adding aerial count
 
             #- Acceptance ratio
             ar = acc.ra.var(log.prop.post = log.prop.posterior
                                                          ,log.curr.post = log.curr.posterior
                                                          ,log.prop.var = dinvGamma(prop.sigmasq.s
-                                                            ,al.s + length(mean.s)/2
-                                                            ,be.s + 0.5*sum((logit.curr.s - logit.mean.s)^2)
+                                                            ,al.s + length(measure.s)/2
+                                                            ,be.s + 0.5*sum((logit.curr.s - logit.measure.s)^2)
                                                             ,log = TRUE)
                                                          ,log.curr.var = dinvGamma(curr.sigmasq.s
-                                                            ,al.s + length(mean.s)/2
-                                                            ,be.s + 0.5*sum((logit.curr.s - logit.mean.s)^2)
+                                                            ,al.s + length(measure.s)/2
+                                                            ,be.s + 0.5*sum((logit.curr.s - logit.measure.s)^2)
                                                             ,log = TRUE)
                                                          )
 
@@ -1526,25 +1748,31 @@ ReCAP_sampler =
 
             ##...... Sex Ratio at Birth ......##
             prop.sigmasq.SRB =
-                rinvGamma(1, al.SRB + length(mean.SRB)/2-sum(is.na(mean.SRB))/2,be.SRB + 0.5*sum((logit.curr.SRB - logit.mean.SRB)^2,na.rm = T))
+                rinvGamma(1, al.SRB + length(measure.SRB)/2-sum(is.na(measure.SRB))/2,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
-                log.prop.posterior =
-                            log.post(f = log.curr.f
+        log.prop.posterior =
+                log.post(f = log.curr.f
                                              ,s = logit.curr.s
                                              ,SRB = logit.curr.SRB
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
+                                             
                                              ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
 
-                                             ,prior.mean.b = mean.b
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
@@ -1556,33 +1784,48 @@ ReCAP_sampler =
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = prop.sigmasq.SRB #<- use proposal
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = curr.sigmasq.H
+                                             
 
 
 
                                              ,log.like =
-                                                        log.lhood(
+                                                        log.lhood_popu(
                                                                 n.census = Harv.data
-                                                                ,n.hat = curr.proj$Harvest#<- use current
-                                                                ) +#<- use current
-                                                        log.lhood(
+                                                                ,n.hat = curr.proj$Harvest
+                                                                ) +
+                                                        log.lhood_popu(
                                                                 n.census = Aerial.data
-                                                                ,n.hat = curr.aeri#<- use current
-                                                                )#<- use current
-                                             ,non.zero.fert = fert.rows
+                                                                ,n.hat = curr.aeri
+                                                                ) +
+                                                        log.lhood_vital(f = log.curr.obs_f
+                                                                        ,s = log.curr.obs_s
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = prop.sigmasq.SRB #<- use proposal
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
                                              )
+
+
+
+
 
             #- Acceptance ratio
             ar = acc.ra.var(log.prop.post = log.prop.posterior
                                                          ,log.curr.post = log.curr.posterior
                                                          ,log.prop.var = dinvGamma(prop.sigmasq.SRB
-                                                            ,al.SRB + length(mean.SRB)/2
-                                                            ,be.SRB + 0.5*sum((logit.curr.SRB - logit.mean.SRB)^2)
+                                                            ,al.SRB + length(measure.SRB)/2
+                                                            ,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2)
                                                             ,log = TRUE)
                                                          ,log.curr.var = dinvGamma(curr.sigmasq.SRB
-                                                            ,al.SRB + length(mean.SRB)/2
-                                                            ,be.SRB + 0.5*sum((logit.curr.SRB - logit.mean.SRB)^2)
+                                                            ,al.SRB + length(measure.SRB)/2
+                                                            ,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2)
                                                             ,log = TRUE)
                                                          )
 
@@ -1605,171 +1848,6 @@ ReCAP_sampler =
             if(k %% 1 == 0 && k > 0) variances.mcmc[k,"SRB.var"] = curr.sigmasq.SRB
 
 
-            ##...... Aerial Count Detection ......## not changed yet
-            prop.sigmasq.A =
-                rinvGamma(1, al.A + length(mean.A)/2-sum(is.na(mean.A))/2,
-                                    be.A +
-                                        0.5*sum((logit.curr.A - logit.mean.A)^2,na.rm = T))
-
-                # - Calculate log posterior of proposed vital under projection
-                log.prop.posterior =
-                            log.post(f = log.curr.f
-                                             ,s = logit.curr.s
-                                             ,SRB = logit.curr.SRB
-                                             ,A = logit.curr.A
-                                             ,H = logit.curr.H
-                                             ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
-
-                                             ,prior.mean.b = mean.b
-                                             ,alpha.f = al.f, beta.f = be.f
-                                             ,alpha.s = al.s, beta.s = be.s
-                                             ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
-                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
-
-
-                                             ,sigmasq.f = curr.sigmasq.f
-                                             ,sigmasq.s = curr.sigmasq.s
-                                             ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = prop.sigmasq.A #<- use proposal
-                                             ,sigmasq.H = curr.sigmasq.H
-
-
-
-                                             ,log.like =
-                                                        log.lhood(
-                                                                n.census = Harv.data
-                                                                ,n.hat = curr.proj$Harvest#<- use current
-                                                                ) +#<- use current
-                                                        log.lhood(
-                                                                n.census = Aerial.data
-                                                                ,n.hat = curr.aeri#<- use current
-                                                                )#<- use current
-                                             ,non.zero.fert = fert.rows
-                                             )
-
-            #- Acceptance ratio
-            ar = acc.ra.var(log.prop.post = log.prop.posterior
-                                                         ,log.curr.post = log.curr.posterior
-                                                         ,log.prop.var = dinvGamma(prop.sigmasq.A
-                                                            ,al.A + length(mean.A)/2
-                                                            ,be.A + 0.5*sum((logit.curr.A - logit.mean.A)^2)
-                                                            ,log = TRUE)
-                                                         ,log.curr.var = dinvGamma(curr.sigmasq.A
-                                                            ,al.A + length(mean.A)/2
-                                                            ,be.A + 0.5*sum((logit.curr.A - logit.mean.A)^2)
-                                                            ,log = TRUE)
-                                                         )
-
-                # - Move or stay
-                #.. stay if acceptance ratio 0, missing, infinity, etc.
-                if(is.na(ar) || is.nan(ar) || ar < 0) {
-                        if(i > burn.in) ar.na$sigmasq.A =
-                                ar.na$sigmasq.A + 1/n.iter
-                } else {
-                        #.. if accept, update current, store proposed
-                        #     and count acceptance
-                        if(runif(1) <= ar) {
-                                if(i > burn.in) acc.count$sigmasq.A =
-                                        acc.count$sigmasq.A + 1/n.iter
-                                curr.sigmasq.A = prop.sigmasq.A
-                                log.curr.posterior = log.prop.posterior
-                        } #.. if reject, leave current and posterior
-                } # close else after checking for ar=na, nan, zero
-
-            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"A.var"] = curr.sigmasq.A
-
-            ##...... Harvest Proportion ......##
-
-            prop.sigmasq.H =
-                rinvGamma(1, al.H + length(logit.mean.H)/2-sum(is.na(logit.mean.H))/2,
-                                    be.H +
-                                        0.5*sum((logit.curr.H - logit.mean.H)^2,na.rm = T))
-
-                # - Calculate log posterior of proposed vital under projection
-                log.prop.posterior =
-                            log.post(f = log.curr.f
-                                             ,s = logit.curr.s
-                                             ,SRB = logit.curr.SRB
-                                             ,A = logit.curr.A
-                                             ,H = logit.curr.H
-                                             ,aK0 = curr.aK0
-                                             ,baseline.n = exp( log.curr.b )
-                                             ,estFec=estFec, estaK0=estaK0
-                                             ,prior.mean.f = log.mean.f
-                                             ,prior.mean.s = logit.mean.s
-                                             ,prior.mean.SRB = logit.mean.SRB
-                                             ,prior.mean.A = logit.mean.A
-                                             ,prior.mean.H = logit.mean.H
-
-                                             ,prior.mean.b = mean.b
-                                             ,alpha.f = al.f, beta.f = be.f
-                                             ,alpha.s = al.s, beta.s = be.s
-                                             ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
-                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
-
-
-                                             ,sigmasq.f = curr.sigmasq.f
-                                             ,sigmasq.s = curr.sigmasq.s
-                                             ,sigmasq.SRB = curr.sigmasq.SRB
-                                             ,sigmasq.A = curr.sigmasq.A
-                                             ,sigmasq.H = prop.sigmasq.H #<- use proposal
-
-
-
-                                             ,log.like =
-                                                        log.lhood(
-                                                                n.census = Harv.data
-                                                                ,n.hat = curr.proj$Harvest#<- use current
-                                                                ) +#<- use current
-                                                        log.lhood(
-                                                                n.census = Aerial.data
-                                                                ,n.hat = curr.aeri#<- use current
-                                                                )#<- use current
-                                             ,non.zero.fert = fert.rows
-                                             )
-
-            #- Acceptance ratio
-            ar = acc.ra.var(log.prop.post = log.prop.posterior
-                                                         ,log.curr.post = log.curr.posterior
-                                                         ,log.prop.var = dinvGamma(prop.sigmasq.H
-                                                            ,al.H + length(mean.H)/2
-                                                            ,be.H + 0.5*sum((logit.curr.H -logit.mean.H)^2)
-                                                            ,log = TRUE)
-                                                         ,log.curr.var = dinvGamma(curr.sigmasq.H
-                                                            ,al.H + length(mean.H)/2
-                                                            ,be.H + 0.5*sum((logit.curr.H -logit.mean.H)^2)
-                                                            ,log = TRUE)
-                                                         )
-
-                # - Move or stay
-                #.. stay if acceptance ratio 0, missing, infinity, etc.
-                if(is.na(ar) || is.nan(ar) || ar < 0) {
-                        if(i > burn.in) ar.na$sigmasq.H =
-                                ar.na$sigmasq.H + 1/n.iter
-                } else {
-                        #.. if accept, update current, store proposed
-                        #     and count acceptance
-                        if(runif(1) <= ar) {
-                                if(i > burn.in) acc.count$sigmasq.H =
-                                        acc.count$sigmasq.H + 1/n.iter
-                                curr.sigmasq.H = prop.sigmasq.H
-                                log.curr.posterior = log.prop.posterior
-                        } #.. if reject, leave current and posterior
-                } # close else after checking for ar=na, nan, zero
-
-            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"H.var"] = curr.sigmasq.H
-
 
             ## ------- Store current population ------- ##
                 logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
@@ -1785,6 +1863,10 @@ ReCAP_sampler =
                 full.proj = (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
                 full.aeri = getAerialCount( full.proj,A = invlogit(logit.curr.A.full))
+                
+                log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+                logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+
 
                 #full.living = (1-invlogit(logit.curr.H.full))*full.proj/(invlogit(logit.curr.H.full))
 
@@ -1793,8 +1875,27 @@ ReCAP_sampler =
                     as.vector(full.proj$Harvest) # to delete all age class' baseline count, because of as.vector,thus need to do like this
                     ae.mcmc[k,] = as.vector(full.aeri)
                     living.mcmc[k,] = as.vector(full.proj$Living)
-                    log.like.mcmc[k,] =log.lhood(n.census = Harv.data,n.hat = (full.proj$Harvest)) +log.lhood(n.census = Aerial.data,n.hat = (full.aeri))
-                }
+                    log.like.mcmc[k,] = log.lhood_popu(
+                                                                n.census = Harv.data
+                                                                ,n.hat = curr.proj$Harvest
+                                                                ) +
+                                                        log.lhood_popu(
+                                                                n.census = Aerial.data
+                                                                ,n.hat = curr.aeri
+                                                                ) +
+                                                        log.lhood_vital(f = log.full.obs_f
+                                                                        ,s = logit.full.obs_s # observed survival and fecundity after adding DD.
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+
+                  }
 
                 if(verb && identical(i%%1000, 0)) cat("\n\n")
 
@@ -1840,19 +1941,23 @@ ReCAP_sampler =
 
     ## abs_dif
     abs_dif = abs(mean.vital$harvest.mcmc-as.vector(Harv.data))
-    mean_abs_dif_harv = mean(abs_dif)
-    se_abs_dif_harv = sd(abs_dif)/(sqrt(proj.periods))
+    mean_abs_dif_harv = mean(abs_dif,na.rm = T)
+    se_abs_dif_harv = sd(abs_dif,na.rm = T)/(sqrt(proj.periods))
 
     abs_dif_aerial = abs(mean.vital$aerial.count.mcmc-as.vector(Aerial.data))
-    mean_abs_dif_ae = mean(abs_dif_aerial)
-    se_abs_dif_ae = sd(abs_dif_aerial)/sqrt(proj.periods)
+    mean_abs_dif_ae = mean(abs_dif_aerial,na.rm = T)
+    se_abs_dif_ae = sd(abs_dif_aerial,na.rm = T)/sqrt(proj.periods)
 
+    #obs_f = (getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
+    #obs_s = (getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+
+                                         
     ## sd
     sd_counts = lapply(list(harvest = lx.mcmc,aerial.count = ae.mcmc)
                        ,function(kk){
                             apply(kk,2,sd)
                        })
-    mean_sd_counts = lapply(sd_counts,mean)
+    mean_sd_counts = lapply(sd_counts,mean,na.rm = T)
 
     ## precision
 
@@ -1900,14 +2005,14 @@ ReCAP_sampler =
                            ,alpha.1overK = min.aK0
                            ,beta.1overK = max.aK0
 
-                           ,mean.fert.rate = mean.f
-                           ,mean.surv.prop = mean.s
-                           ,mean.SRB = mean.SRB
-                           ,mean.aerial.detection = mean.A
-                           ,mean.Harvest.proportion = mean.H
+                           ,measure.fert.rate = measure.f
+                           ,measure.surv.prop = measure.s
+                           ,measure.sRB = measure.sRB
+                           ,prior.mean.Aerial.detection = prior.mean.A
+                           ,prior.mean.Harvest.proportion = prior.mean.H
 
-                           ,mean.baseline.count = mean.b
-                           ,mean.Harv.data = Harv.data
+                           ,measure.baseline.count = measure.b
+                           ,prior.mean.Harv.data = Harv.data
                            ,Aerial.data = Aerial.data
                            ,Assumptions = Assumptions
                            ,point.est = point.est)

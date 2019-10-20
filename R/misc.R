@@ -11,16 +11,67 @@ Check_assumptions = function(Assumptions, nage, proj.period){
 
 }
 
+
+Check_observations = function(Observations, nage){
+	if(is.null(Observations$Fec)) Assumptions$Fec = eyes(nage[1])
+	if(is.null(Observations$Surv)) Assumptions$Surv = eyes(sum(nage))
+	if(is.null(Observations$AerialCount)) Assumptions$AerialCount = matrix(1,sum(nage),1)
+
+	return(Assumptions)
+
+}
+
+Check_Designs = function(Designs,nage,proj.period){
+	        
+     if(is.null(Observations$Fec))  Designs$Fec = eyes(proj.periods)
+     if(is.null(Observations$Surv))  Designs$Surv = eyes(proj.periods)
+     if(is.null(Observations$SRB))  Designs$SRB = eyes(proj.periods)
+     if(is.null(Observations$Harv))  Designs$Harv = eyes(proj.periods + 1)
+     if(is.null(Observations$AerialDet))  Design$AerialDet = eyes(proj.periods + 1)
+         	
+}
+
 Check_prop_var = function(prop.var,nage,proj.period){
-	if(is.null(prop.var$fert.rate)) prop.var$fert.rate = matrix(1,nrow = nage[1],ncol = proj.period)
-	if(is.null(prop.var$surv.prop)) prop.var$surv.prop = matrix(1,nrow = sum(nage),ncol = proj.period)
+	if(is.null(prop.var$Fec)) prop.var$Fec = matrix(1,nrow = nage[1],ncol = proj.period)
+	if(is.null(prop.var$Surv)) prop.var$Surv = matrix(1,nrow = sum(nage),ncol = proj.period)
 	if(is.null(prop.var$SRB)) prop.var$SRB = matrix(.1,nage[1],proj.period)
-	if(is.null(prop.var$A)) prop.var$A = matrix(1,1,proj.period+1)
-	if(is.null(prop.var$H)) prop.var$H = matrix(1,sum(nage),proj.period+1)
+	if(is.null(prop.var$AerialDet)) prop.var$AerialDet = matrix(1,1,proj.period+1)
+	if(is.null(prop.var$Harv)) prop.var$Harv = matrix(1,sum(nage),proj.period+1)
 	if(is.null(prop.var$aK0)) prop.var$aK0 = list(5e-8,5e-8,50)
 	if(is.null(prop.var$baseline.pop.count)) prop.var$baseline.pop.count = matrix(1,nrow = sum(nage),ncol = 1)
 	return(prop.var)
 }
+
+
+
+
+random_beta = function(Design, Assumption, nage,period_used){
+	npara = ncol(Design)
+	assu_time = Assumption$time
+	assu_age = Assumption$age
+	
+	if(nrow(assu_age)!=nage){
+		cat("    Age assumption matrix must have row number same to number of age classes considered\n")
+		errs = errs + 1
+	}
+
+	if(ncol(assu_time) != period_used){
+		cat("    Time assumption matrix must have column number same to number of periods considered\n")
+		errs = errs + 1
+	}
+
+
+	
+	if(nrow(Design)!= nrow(assu_time)) {
+		stop("    Incompatable age assumption matrix with design matrix, if you did not specify the assumption matrix, check the Design matrix\n")
+	}
+	
+	
+	
+	return(matrix( runif(ncol( assu_age ) * npara,-1,1),ncol = ncol( assu_age )))
+
+}
+
 
 Check_dimensions = function(mean_vital,Assumption,nage,period_used){
 	errs = 0
@@ -42,7 +93,7 @@ Check_dimensions = function(mean_vital,Assumption,nage,period_used){
 	}
 
 	if(nrow(assu_time) != ncol(mean_vital)){
-		cat("    Incompatable age assumption matrix, if you did not specify the assumption matrix, check the prior mean matrix\n")
+		cat("    Incompatable time assumption matrix, if you did not specify the assumption matrix, check the prior mean matrix\n")
 		errs = errs + 1
 	}
 	if(errs==0) cat("    all clear\n")
@@ -51,17 +102,14 @@ Check_dimensions = function(mean_vital,Assumption,nage,period_used){
 }
 
 Check_data = function(data_in,nage,nperiod){
-	errs = 0
 	if(nrow(data_in)!=nage){
-		cat("    Row number of data does not match age classes\n")
-		errs = errs + 1
+		stop("    Row number of data does not match age classes\n")
 	}
 	if(ncol(data_in)!=nperiod){
-		cat("    Column number of data does not match period of measurements\n")
-		errs = errs + 1
+		stop("    Column number of data does not match period of measurements\n")
 	}
-	if(errs==0) cat("    all clear\n")
-	return(errs)
+	cat("    all clear\n")
+	return(0)
 }
 
 ProjectHarvest = function(Surv, Harvpar, Fec, SRB, bl, period, nage, aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T){
@@ -110,7 +158,7 @@ dinvGamma = function(x, shape, scale, log = FALSE){
 ## ..................................... ##
 
 #log likelihood function of gaussian distributed
-log.lhood =function(n.census, n.hat){
+log.lhood_popu =function(n.census, n.hat){
     ##-- value of log likelihoods --##
     density = dpois(x=n.census,lambda = n.hat,log = TRUE) # Use Poisson instead in Poisson_likelihood
     ##-- joint log likelihood --##
@@ -118,27 +166,49 @@ log.lhood =function(n.census, n.hat){
         return(sum(density))
 } # checked 10/24/2018
 
+log.lhood_vital = function(f, s, SRB,estFec,measure.f, measure.s, measure.SRB
+						   ,sigmasq.f, sigmasq.s, sigmasq.SRB
+						   ,non.zero.fert){
+	if(estFec)
+	log.f.lhood = dnorm(as.vector(measure.f[non.zero.fert,])
+                        , mean = as.vector(f[non.zero.fert,])
+                        , sd = sqrt(sigmasq.f)
+                        , log = TRUE)
+	else log.f.lhood = 0
+	log.s.lhood = dnorm(as.vector(measure.s)
+                        , mean = as.vector(s)
+                        , sd = sqrt(sigmasq.s)
+                        , log = TRUE)
+
+	log.SRB.lhood = dnorm(as.vector(measure.SRB)
+                        , mean = as.vector(SRB)
+                        , sd = sqrt(sigmasq.SRB)
+                        , log = TRUE)
+
+	return(sum(log.f.lhood,log.SRB.lhood,log.s.lhood,na.rm = T)) # need to deal with no measurement case
+}
+
 ## .............. Posterior ............ ##
 ## ..................................... ##    keep it, change in sampler function, but no migration here, should add estaK0
 
 log.post = function(## estimated vitals
-                    f, s, SRB,baseline.n, aK0, A, H # A for Aerial count detection probability
-                    , estFec, estaK0
-                    ## fixed prior means on vitals
-                    , prior.mean.f, prior.mean.s, prior.mean.SRB
-                    , prior.mean.b #, prior.mean.aK0
+					f, s, SRB
+                    , aK0, A, H # A for Aerial count detection probability
+                    , estaK0,estFec
+                    ## fixed prior means on detections
+					, prior.mean.f, prior.mean.s
+					, prior.var.f, prior.var.s
+					, prior.mean.SRB, prior.var.SRB
                     , prior.mean.A, prior.mean.H
+					, prior.var.A, prior.var.H
+					, min.aK0, max.aK0
                     ## fixed prior parameters on variance distns
-                    , alpha.f, beta.f, alpha.s, beta.s, alpha.SRB, beta.SRB
-                    , min.aK0, max.aK0
-                    , alpha.A, beta.A, alpha.H, beta.H
-                    ## updated variances on prior distns
-                    , sigmasq.f, sigmasq.s, sigmasq.SRB,sigmasq.n#, sigmasq.aK0
-                    , sigmasq.A ,sigmasq.H
+                    , alpha.f, beta.f, alpha.s, beta.s, alpha.SRB, beta.SRB # prior for measurement error  
+					, sigmasq.f, sigmasq.s, sigmasq.SRB # measurement errors
                     ## value of the log likelihood
                     , log.like
                     ## non zero rows of fertility matrix
-                    , non.zero.fert){
+                    ){
 
         ##-- Values of prior densities for vitals --##
 
@@ -148,18 +218,6 @@ log.post = function(## estimated vitals
         ##         prior.mean.g are not transformed coming in.
         ##-- prior for f and baseline K0 if needed to be estimatedd --##
 
-        if(estFec){
-            log.f.prior = dnorm(as.vector(f[non.zero.fert,])
-                                , mean = as.vector(prior.mean.f[non.zero.fert,])
-                                , sd = sqrt(sigmasq.f)
-                                , log = TRUE)
-            log.sigmasq.f.prior =
-                log(dinvGamma(sigmasq.f, alpha.f, beta.f))
-        }
-        else {
-            log.f.prior = 0
-            log.sigmasq.f.prior = 0
-        }
 
         if(estaK0){
             log.aK0.prior =#sum( dunif(aK0[[1]],min.aK0[[1]],max.aK0[[1]],T) , dunif(aK0[[2]],min.aK0[[2]],max.aK0[[2]],T))
@@ -174,38 +232,41 @@ log.post = function(## estimated vitals
             log.aK0.prior = 0
             log.sigmasq.aK0.prior = 0
         }
+		
+		if(estFec){
+			log.f.prior = dnorm(f, mean = prior.mean.f, sd = sqrt(prior.var.f)
+                            ,log = TRUE)
+			log.sigmasq.f.prior =
+                log(dinvGamma(sigmasq.f, alpha.f, beta.f))
+		}
+		else{
+			log.f.prior = 0
+			log.sigmasq.f.prior = 0
+		}
 
         ##-- prior for s and Sex Ratio at Birth (SRB), Aerial count detection rate, and hunting rate H --##
-        log.s.prior = dnorm(s, mean = prior.mean.s, sd = sqrt(sigmasq.s)
+        log.s.prior = dnorm(s, mean = prior.mean.s, sd = sqrt(prior.var.s)
                             ,log = TRUE)
-        log.SRB.prior = dnorm(SRB, mean = prior.mean.SRB, sd = sqrt(sigmasq.SRB)
+        log.SRB.prior = dnorm(SRB, mean = prior.mean.SRB, sd = sqrt(prior.var.SRB)
                               ,log = TRUE)
         log.H.prior = dnorm(H, mean = prior.mean.H
-                            ,sd = sqrt(sigmasq.H)
+                            ,sd = sqrt(prior.var.H)
                             ,log = TRUE)
         log.A.prior = dnorm(A, mean = prior.mean.A
-                            ,sd = sqrt(sigmasq.A)
+                            ,sd = sqrt(prior.var.A)
                             ,log = TRUE)
         log.sigmasq.s.prior =
                 log(dinvGamma(sigmasq.s, alpha.s, beta.s))
         log.sigmasq.SRB.prior =
                 log(dinvGamma(sigmasq.SRB, alpha.SRB, beta.SRB))
-        log.sigmasq.A.prior =
-                log(dinvGamma(sigmasq.A, alpha.A, beta.A))
-        log.sigmasq.H.prior =
-                log(dinvGamma(sigmasq.H, alpha.H, beta.H))
-
         ##-- The log posterior is the SUM of these with the log.like --##
 
-    return(sum(log.f.prior, log.s.prior, log.SRB.prior#, log.b.prior
-    , log.aK0.prior, log.H.prior,log.A.prior,
-                             log.sigmasq.f.prior
-                             ,log.sigmasq.s.prior
-                             ,log.sigmasq.SRB.prior
-                             #,log.sigmasq.aK0.prior
-                             ,log.sigmasq.H.prior
-                             ,log.sigmasq.A.prior
-                             ,log.like,na.rm = T)) # keep NA for missing data, remove NAs
+    return(sum(log.f.prior, log.s.prior, log.SRB.prior
+    						 , log.aK0.prior, log.H.prior,log.A.prior
+                             , log.sigmasq.f.prior
+                             , log.sigmasq.s.prior
+                             , log.sigmasq.SRB.prior
+                             , log.like,na.rm = T)) # keep NA for missing data, remove NAs
 
 }
 

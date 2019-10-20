@@ -36,46 +36,72 @@ arma::mat DD(const bool& global, const arma::mat& Xn,const arma::mat & aK0, cons
 }
 
 
-
-arma::mat ProjectLiving_helper2Cpp(const arma::mat& Living_n1,const arma::mat& Surv, const arma::mat& Fec,const double& SRB,bool global, const List& aK0,const bool & null){
+Rcpp::List ProjectLiving_helper2Cpp(const arma::mat& Living_n1,const arma::mat& Surv, const arma::mat& Fec,const double& SRB,bool global, const List& aK0,const bool & null){
 	arma::mat D_bir = DD(global, Living_n1, aK0[0], aK0[2] ,null);
 	arma::mat D_dea = DD(global, Living_n1, aK0[1], aK0[2] ,null);
-	return((getLeslie(Surv % D_dea, Fec % D_bir, SRB)*Living_n1));
+	arma::mat Fec_obs = Fec % D_bir;
+	arma::mat Surv_obs = Surv % D_dea;
+	arma::mat Living = (getLeslie(Surv_obs, Fec_obs, SRB)*Living_n1);
+	return(Rcpp::List::create(
+		Rcpp::Named("Living")=Living,//pre harvest living individuals
+		Rcpp::Named("Fec") = Fec_obs,// observed fecundity w/ DD
+		Rcpp::Named("Surv") = Surv_obs// observed survival w/ DD
+		)
+	);
 }
 
 
 ///main projection function, w/ missing harvest
 //[[Rcpp::export]]
-List ProjectAllCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
+Rcpp::List ProjectAllCpp(const arma::mat& Surv,const arma::mat& Harvpar,const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl ,const int& period, const IntegerVector& nage){
 	arma::mat Harvest(sum(nage),period+1); // deal with the case that there is no harvest for a certain year
 	arma::mat Living(sum(nage),period+1);
+	arma::mat Fecobs(nage(0),period);
+	arma::mat Survobs(sum(nage),period);
+	arma::mat living_temp(sum(nage),1);
+	List Proj_temp(3);
 	Harvest.col(0) = bl;
 	Living.col(0) = (1/Harvpar.col(0)) % bl; // pre harvest living individuals
 	for(int i = 1; i<period + 1; i++){
-			Living.col(i) = ProjectLiving_helper2Cpp(Living.col(i-1)-Harvest.col(i-1), // post cull population went into reproduction
-													 Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)),global, aK0,null);// pre-cull population of next year
+			Proj_temp = ProjectLiving_helper2Cpp(Living.col(i-1)-Harvest.col(i-1), Surv.col(i-1),Fec.col(i-1),(SRB(0,i-1)),global, aK0,null);// pre-cull population of next year
+			arma::mat Living_temp = Proj_temp["Living"];
+			Living.col(i) = Living_temp;
+			arma::mat Fec_temp = Proj_temp["Fec"];
+			Fecobs.col(i-1) = Fec_temp;
+			arma::mat Surv_temp = Proj_temp["Surv"];
+			Survobs.col(i-1) = Surv_temp;
 			Harvest.col(i) = Living.col(i) % Harvpar.col(i); // culling
 	}
 	//List res = List::create(Named["Harvest"] = Harvest , _["Living"] = Living);
 	return(Rcpp::List::create(
 	        Rcpp::Named("Harvest") = Harvest ,
-	        Rcpp::Named("Living") = Living-Harvest));//
+	        Rcpp::Named("Living") = Living-Harvest,
+		  	Rcpp::Named("Fec_obs") = Fec,
+		    Rcpp::Named("Surv_obs") = Surv
+	));//
 }
 
 ///get Aerial count
 //[[Rcpp::export]]
-arma::mat getAerialCountPost(const List& Proj, const arma::mat& A){
+arma::mat getAerialCountPost(const List& Proj, const arma::mat& obsMat,const arma::mat& A){
   arma::mat living = Proj["Living"];
-  return((sum(living))%A);
+  return(((obsMat.t() * living))%A);
 }
 ///get Aerial count
 //[[Rcpp::export]]
-arma::mat getAerialCountPre(const List& Proj, const arma::mat& A){
+arma::mat getAerialCountPre(const List& Proj, const arma::mat& obsMat, const arma::mat& A){
     arma::mat living = Proj["Living"];
     arma::mat harv = Proj["Harvest"];
-    return((sum(living+harv))%A);//
+    return((obsMat.t() * (living+harv))%A);//
 }
 
+
+arma::mat getobsVitals(const arma::mat& vital, const arma::mat& living,const arma::mat& obsMat){
+	arma::mat previous_living = living.cols(0,living.n_cols-2);
+	return(obsMat.t() * (vital % living)/obsMat.t() * living); // matrix form for weighted average of vital rate,
+// classMat has row as age classes, col as classes, e.g. 5 age and 3 classes, first two are two classes and last 3 are one, classMat will be
+	//[1,0,0;0,1,0;0,0,1;0,0,1;0,0,1]
+}
 
 ///get observed lambda (growth rate from harvest)
 

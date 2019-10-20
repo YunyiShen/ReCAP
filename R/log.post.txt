@@ -1,0 +1,62 @@
+        log.prop.posterior =
+                log.post(f = log.curr.f
+                                             ,s = logit.curr.s
+                                             ,SRB = logit.curr.SRB
+                                             ,A = logit.curr.A
+                                             ,H = logit.curr.H
+                                             ,aK0 = curr.aK0
+                                             
+                                             ,estFec=estFec, estaK0=estaK0
+                         
+                                             ,prior.mean.f = log.prior.mean.f
+                                             ,prior.mean.s = log.prior.mean.s
+                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.A = logit.prior.mean.A
+                                             ,prior.mean.H = logit.prior.mean.H
+
+                                             ,prior.var.f = prior.var.f
+                                             ,prior.var.s = prior.var.s
+                                             ,prior.var.SRB = prior.var.SRB
+                                             ,prior.var.A = prior.var.A
+                                             ,prior.var.H = prior.var.H
+                                             
+                                             ,alpha.f = al.f, beta.f = be.f
+                                             ,alpha.s = al.s, beta.s = be.s
+                                             ,alpha.SRB = al.SRB, beta.SRB = be.SRB
+                                             ,alpha.A = al.A, beta.A = be.A
+                                             ,alpha.H = al.H, beta.H = be.H
+                                             ,min.aK0 = min.aK0, max.aK0 = max.aK0
+
+
+                                             ,sigmasq.f = curr.sigmasq.f
+                                             ,sigmasq.s = curr.sigmasq.s
+                                             ,sigmasq.SRB = curr.sigmasq.SRB
+                                             
+
+
+
+                                             ,log.like =
+                                                        log.lhood_popu(
+                                                                n.census = Harv.data
+                                                                ,n.hat = curr.proj$Harvest
+                                                                ) +
+                                                        log.lhood_popu(
+                                                                n.census = Aerial.data
+                                                                ,n.hat = curr.aeri
+                                                                ) +
+                                                        log.lhood_vital(f = log.curr.f
+                                                                        ,s = logit.curr.s
+                                                                        ,SRB = logit.curr.SRB
+                                                                        ,estFec = estFec
+                                                                        ,measure.f = log.measure.f
+                                                                        ,measure.s = log.measure.s
+                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f
+                                                                        ,sigmasq.s = curr.sigmasq.s
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,non.zero.fert = fert.rows)
+                                                        #　both harvest and aerial count, as well as vital rates
+                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                             )
+
+
