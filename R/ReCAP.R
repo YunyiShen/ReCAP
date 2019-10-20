@@ -8,9 +8,10 @@ ReCAP_sampler =
                          #.. fixed prior means
                          , measure.f, measure.s, measure.SRB
                          , prior.mean.f, prior.mean.s, prior.mean.SRB
-                         , prior.var.f, prior.var.s, prior.var.SRB              
+                         , prior.var.f, prior.var.s, prior.var.SRB # can give several priors for different classes, make sure compatible with prior.age class, or giving             
                          , prior.mean.H, prior.mean.A
                          , prior.var.H = 2, prior.var.A = 2
+                         , priors.ageclass = list() # age classes in prior
                          , measure.b=Harv.data[,1]
                          , Aerialcount_time = "post"
                          , n.iter=50000, burn.in = 5000, thin.by = 10
@@ -22,10 +23,11 @@ ReCAP_sampler =
                          
                          #.. census data
                          #     *not transformed coming in*
+                         
                          , Assumptions = list() # Assumption matrices
-                         , Designs = list() # Design matrices 
-                         , Observations = list() # observation matrices, row as raw most detailed age, columns as age classes (e.g. fawn, yearling, adults)
-                          
+                         , Designs = list() # Design matrices rows as year, or time ingeneral, cols as covariate, then beta will have rows as covariate and cols as age classes, dependends on assumptions
+                         , Observations = list() # observation age classes, row as raw most detailed age, columns as age classes (e.g. fawn, yearling, adults)
+                         
                          #.. inital values for vitals and variances
                          #     *vitals not transformed coming in* all not transfer, will transfer later before sample and transfer back when saving
                          , start.sigmasq.f = .05, start.sigmasq.s = .05, start.sigmasq.SRB = .05
@@ -33,7 +35,7 @@ ReCAP_sampler =
                          #.. **variances** for proposal distributions used in M-H
                          #     steps which update vital rates.
                          ,prop.vars = list() # col names should be as follow:
-                                     # "fert.rate", "surv.prop", "SRB","H", "A","aK0"
+                                     # "Fec", "Surv", "SRB","Harv", "AerialDet","aK0"
                                      # ,"baseline.count"
 
                          #.. number of periods to project forward over (e.g.,
@@ -62,6 +64,7 @@ ReCAP_sampler =
         measure.b = as.matrix( measure.b)
         Harv.data = as.matrix(Harv.data)
         Aerial.data = as.matrix(Aerial.data)
+        
 
         missing_harv = which(colSums(Harv.data)==0 |
                              colSums(is.na(Harv.data))==nrow(Harv.data)) # for missing harvest/skipped year
@@ -72,19 +75,50 @@ ReCAP_sampler =
 
         if(Aerialcount_time=="pre") getAerialCount=getAerialCountPre
         else getAerialCount=getAerialCountPost
-        cat("Checking input dimensions...\n")
+        cat("Checking input dimensions...\n\n")
+        cat("  Checking priors:\n")
+        if(length(prior.mean.f)!=length(prior.var.f)|
+           length(prior.mean.s)!=length(prior.var.s)|
+           length(prior.mean.SRB)!=length(prior.var.SRB)|
+           length(prior.mean.H) != length(prior.var.H)|
+           length(prior.mean.A) != length(prior.var.A)
+           ) stop("    Make sure prior mean and var have same lenght.\n")
         
         
+        if(prior.mean.f != 1 & prior.mean.f != nage[1]){
+           prior.mean.f = priors.ageclass$f %*%  prior.mean.f
+           prior.var.f = priors.ageclass$f %*%  prior.var.f
+        }
+                
+        
+        if(prior.mean.f != 1 & prior.mean.f != sum(nage)){
+           prior.mean.s = priors.ageclass$s %*%  prior.mean.s
+           prior.var.s = priors.ageclass$s %*%  prior.var.s
+        }   
+                
+        if(prior.mean.SRB != 1){
+           stop("    SRB is assumed to have no age structure.\n")
+        }
+                
+        if(prior.mean.H != 1 & prior.mean.H != sum(nage)){
+           prior.mean.H = priors.ageclass$H %*%  prior.mean.H
+           prior.var.H = priors.ageclass$H %*%  prior.var.H
+        }
+                
+        if(prior.mean.A != 1 ){
+           stop("    Aerial detection count is assumed to have no age structure.\n")
+        }  
+                
         Assumptions = Check_assumptions(Assumptions, nage, proj.periods)
         prop.vars = Check_prop_var(prop.vars,nage,proj.periods)
                 
         Observations = Check_observations(Observations, nage)
         errs_dim = 0
-        cat("  Check Harvest data:\n")
+        cat("\n  Check Harvest data:\n")
         Check_data(Harv.data,sum(nage),proj.periods + 1 )
         cat("\n  Check Aerial count data:\n")
         Check_data(Aerial.data,1,proj.periods + 1)
-        
+        cat("All Green \n")
        
         
                 
@@ -501,7 +535,7 @@ ReCAP_sampler =
                 log.prop.f.mat =
                         matrix(0, nrow = nrow(log.curr.f), ncol = ncol(log.curr.f))
                 log.prop.f.mat[fert.rows,][j] =
-                        rnorm(1, 0, sqrt(prop.vars$fert.rate[j])) #pop vars col names
+                        rnorm(1, 0, sqrt(prop.vars$Fec[j])) #pop vars col names
 
                 #.. make proposal
                 log.prop.f = log.curr.f + log.prop.f.mat
@@ -649,7 +683,7 @@ ReCAP_sampler =
                 logit.prop.s.mat =
                         matrix(0, nrow = nrow(logit.curr.s)
                                      ,ncol = ncol(logit.curr.s)) # this result depends on whether time-homo assumed.
-                logit.prop.s.mat[j] = rnorm(1, 0, sqrt(prop.vars$surv.prop[j]))
+                logit.prop.s.mat[j] = rnorm(1, 0, sqrt(prop.vars$Surv[j]))
 
                 #.. make proposal
                 logit.prop.s = logit.curr.s + logit.prop.s.mat
@@ -970,7 +1004,7 @@ ReCAP_sampler =
                 #.. make a matrix conformable w rate matrix
                 prop.H.mat =
                         0*logit.curr.H
-                prop.H.mat[j] = rnorm(1, 0, sqrt(prop.vars$H[j])) # if need age-imspecific harvest, simply give a 1 by 1 start.H
+                prop.H.mat[j] = rnorm(1, 0, sqrt(prop.vars$Harv[j])) # if need age-imspecific harvest, simply give a 1 by 1 start.H
 
                 #.. make proposal
                 logit.prop.H = logit.curr.H + prop.H.mat
@@ -1112,7 +1146,7 @@ ReCAP_sampler =
                 #.. make a matrix conformable w rate matrix
                 prop.A.mat =
                         0*logit.curr.A
-                prop.A.mat[j] = rnorm(1, 0, sqrt(prop.vars$A[j])) # if need age-imspecific harvest, simply give a 1 by 1 start.H
+                prop.A.mat[j] = rnorm(1, 0, sqrt(prop.vars$AerialDet[j])) # if need age-imspecific harvest, simply give a 1 by 1 start.H
 
                 #.. make proposal
                 logit.prop.A = logit.curr.A + prop.A.mat
