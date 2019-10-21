@@ -7,17 +7,14 @@ ReCAP_sampler =
                          , nage
                          #.. fixed prior means
                          , measure.f, measure.s, measure.SRB
-                         , prior.mean.f, prior.mean.s, prior.mean.SRB
-                         , prior.var.f, prior.var.s, prior.var.SRB # can give several priors for different classes, make sure compatible with prior.age class, or giving             
-                         , prior.mean.H, prior.mean.A
-                         , prior.var.H = 2, prior.var.A = 2
-                         , priors.ageclass = list() # age classes in prior
-                         , measure.b=Harv.data[,1]
+                         , prior.mean # list, with entry named Fec, Surv, SRB, Harv, AerialDet
+				 		 , prior.var # list, with entry named Fec, Surv, SRB, Harv, AerialDet
+                         , priors.ageclass = list() # age classes in prior, list, with entry named Fec, Surv, SRB, Harv, AerialDet
                          , Aerialcount_time = "post"
                          , n.iter=50000, burn.in = 5000, thin.by = 10
 
                          #.. fixed variance hyper-parameters
-                         ,al.f = 1, be.f = 0.05, al.s = 1, be.s = 0.1,al.SRB = 1,be.SRB = 0.05
+			 , prior.measurement.err = list() # measurement error for vital rates, list with two entries are also lists, first Alpha and then Beta, each list (e.g. Alpha) has three entries called Fec, Surv and SRB
                          , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
                          , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
                          
@@ -30,17 +27,17 @@ ReCAP_sampler =
                          
                          #.. inital values for vitals and variances
                          #     *vitals not transformed coming in* all not transfer, will transfer later before sample and transfer back when saving
-                         , start.sigmasq.f = .05, start.sigmasq.s = .05, start.sigmasq.SRB = .05
+                         , start.measurement.err = list() # starting value for vital rates measurement error, entries called Fec, Surv and SRB
 
                          #.. **variances** for proposal distributions used in M-H
                          #     steps which update vital rates.
-                         ,prop.vars = list() # col names should be as follow:
+                         , prop.vars = list() # col names should be as follow:
                                      # "Fec", "Surv", "SRB","Harv", "AerialDet","aK0"
-                                     # ,"baseline.count"
+                                     # "baseline.count"
 
                          #.. number of periods to project forward over (e.g.,
                          #         number of projection steps, usually a year
-                         ,proj.periods = (ncol(Harv.data)-1)
+                         , proj.periods = (ncol(Harv.data)-1)
 
                          #.. age group, if multiple sex, the one reproduce should be at first.
 
@@ -49,8 +46,8 @@ ReCAP_sampler =
                          ,aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(0,1,1)), global = T, null = T
                          # control parameters for the model, global is whether density dependency is global rather than age specific, null is whether exist density dependency (True of not ).
                          ,point.est = mean
-                         #.. print algorithm progress
-                         ,verb = FALSE
+                         ,ProjectionFunction = ProjectHarvest # customerize projection function, rarely used
+                 
                          #.. tolerance defining allowable survival probabilities, should be >0, or things is gonna die out.
                          ,s.tol = 10^(-10)
                          )
@@ -61,11 +58,24 @@ ReCAP_sampler =
         measure.f = as.matrix( measure.f)
         measure.s = as.matrix( measure.s)
         measure.SRB = as.matrix( measure.SRB)
-        measure.b = as.matrix( measure.b)
+        measure.b = as.matrix( Harv.data[,1])
         Harv.data = as.matrix(Harv.data)
         Aerial.data = as.matrix(Aerial.data)
-        
+        verb = F
+		
+	prior.mean.f = prior.mean$Fec
+	prior.mean.s = prior.mean$Surv # Historical problem, to make name of vital rates consistent
+	prior.mean.SRB = prior.mean$SRB
+        prior.var.f = prior.var$Fec
+	prior.var.s = prior.var$Surv
+	prior.var.SRB  = prior.var$SRB# can give several priors for different classes, make sure compatible with prior.age class, or giving             
+        prior.mean.H = prior.mean$Harv
+	prior.mean.A = prior.mean$AerialDet
+	prior.var.H = prior.var$Harv
+	prior.var.A = prior.var$AerialDet
 
+		
+			
         missing_harv = which(colSums(Harv.data)==0 |
                              colSums(is.na(Harv.data))==nrow(Harv.data)) # for missing harvest/skipped year
 
@@ -111,7 +121,10 @@ ReCAP_sampler =
                 
         Assumptions = Check_assumptions(Assumptions, nage, proj.periods)
         prop.vars = Check_prop_var(prop.vars,nage,proj.periods)
-                
+        
+	prior.measurement.err = Check_prior_measurement_err(prior.measurement.err)
+        start.measurement.err = Check_start_measurement_err(start.measurement.err)
+		
         Observations = Check_observations(Observations, nage)
         errs_dim = 0
         cat("\n  Check Harvest data:\n")
@@ -128,13 +141,22 @@ ReCAP_sampler =
         srart.H = random_beta(Designs$Harv, Assumption$Harv,nage,proj.periods+1)
         srart.A = random_beta(Designs$AerialDet, Assumption$AerialDet,nage,proj.periods+1)        
                 
-
-        start.b = measure.b
+        
+        start.sigmasq.f = start.measurement.err$Fec
+        start.sigmasq.s = start.measurement.err$Surv
+        start.sigmasq.SRB = start.measurement.err$SRB
+                
+        start.b = as.matrix(Harv.data[,1])
         start.b[is.na(start.b)] = 5
         start.aK0 = min.aK0
                 
-
-
+	al.f = prior.measurement.err$Alpha$Fec 
+	be.f = prior.measurement.err$Beta$Fec 
+	al.s = prior.measurement.err$Alpha$Surv
+	be.s = prior.measurement.err$Beta$Fec 
+	al.SRB = prior.measurement.err$Alpha$SRB
+	be.SRB = prior.measurement.err$Beta$Fec 
+        
         ## -------- Begin timing ------- ##
         cat("\n")
         ptm = proc.time()
@@ -279,33 +301,33 @@ ReCAP_sampler =
                              ,start = burn.in + 1
                              ,thin = thin.by)
             colnames(variances.mcmc) =
-                    c("fert.rate.var", "surv.prop.var", "SRB.var") 
+                    c("Fec.var", "Surv.var", "SRB.var") 
 
         #.. Record acceptance rate
 
         acc.count =
-                list(fert.rate = matrix(0, nrow = nrow(as.matrix( measure.f[fert.rows,]))
-                         ,ncol = ncol(as.matrix( measure.f[fert.rows,]))
-                         ,dimnames = dimnames(( measure.f[fert.rows,]))
+                list(Fec = matrix(0, nrow = nrow(as.matrix( start.f))
+                         ,ncol = ncol(as.matrix( start.f))
+                         ,dimnames = dimnames(( start.f))
                          )
-                         ,surv.prop = matrix(0, nrow = nrow(as.matrix( measure.s))
-                            ,ncol = ncol(as.matrix( measure.s))
-                            ,dimnames = dimnames(measure.s)
+                         ,Surv = matrix(0, nrow = nrow(as.matrix( start.s))
+                            ,ncol = ncol(as.matrix( start.s))
+                            ,dimnames = dimnames(start.s)
                             )
-                         ,SRB = matrix(0, nrow = nrow(as.matrix( measure.SRB))
-                            ,ncol = ncol(as.matrix( measure.SRB))
-                            ,dimnames = dimnames(measure.SRB))
-                         ,A = matrix(0, nrow = nrow(as.matrix(prior.mean.A)), ncol = ncol(as.matrix( prior.mean.A))
-                            ,dimnames = dimnames(prior.mean.A)
+                         ,SRB = matrix(0, nrow = nrow(as.matrix( start.SRB))
+                            ,ncol = ncol(as.matrix( start.SRB))
+                            ,dimnames = dimnames(start.SRB))
+                         ,A = matrix(0, nrow = nrow(as.matrix(start.A)), ncol = ncol(as.matrix( start.A))
+                            ,dimnames = dimnames(start.A)
                             )
-                         ,H = matrix(0, nrow = nrow(as.matrix(prior.mean.H)), ncol = ncol(as.matrix( prior.mean.H))
-                            ,dimnames = dimnames(prior.mean.H)
+                         ,H = matrix(0, nrow = nrow(as.matrix(start.H)), ncol = ncol(as.matrix( start.H))
+                            ,dimnames = dimnames(start.H)
                             )
                          ,aK0 = matrix(0, nrow = nrow(as.matrix( start.aK0)), ncol = ncol( as.matrix(start.aK0))
                             ,dimnames = dimnames(start.aK0)
                             )
-                         ,baseline.count = matrix(0, nrow = nrow(as.matrix( measure.b))
-                            ,dimnames = dimnames( measure.b)
+                         ,baseline.count = matrix(0, nrow = nrow(as.matrix( start.b))
+                            ,dimnames = dimnames( start.b)
                             )
                          ,sigmasq.f = 0
                          ,sigmasq.s = 0
@@ -322,36 +344,39 @@ ReCAP_sampler =
         #.. Count how often projection gives negative population
 
         pop.negative =
-                list(fert.rate = matrix(0, nrow = nrow(as.matrix( measure.f[fert.rows,]))
-                         ,ncol = ncol(as.matrix( measure.f[fert.rows,]))
-                         ,dimnames = dimnames(( measure.f[fert.rows,]))
+                list(Fec = matrix(0, nrow = nrow(as.matrix( start.f))
+                         ,ncol = ncol(as.matrix( start.f))
+                         ,dimnames = dimnames(( start.f))
                          )
-                         ,surv.prop = matrix(0, nrow = nrow(as.matrix( measure.s))
-                            ,ncol = ncol(as.matrix( measure.s))
-                            ,dimnames = dimnames(measure.s)
+                         ,Surv = matrix(0, nrow = nrow(as.matrix( start.s))
+                            ,ncol = ncol(as.matrix( start.s))
+                            ,dimnames = dimnames(start.s)
                             )
-                         ,SRB = matrix(0, nrow = nrow(as.matrix( measure.SRB))
-                            ,ncol = ncol(as.matrix( measure.SRB)))
-                            ,dimnames = dimnames(measure.SRB)
-                         ,A = matrix(0, nrow = nrow(as.matrix(prior.mean.A)), ncol = ncol(as.matrix( prior.mean.A))
-                            ,dimnames = dimnames(prior.mean.A)
+                         ,SRB = matrix(0, nrow = nrow(as.matrix( start.SRB))
+                            ,ncol = ncol(as.matrix( start.SRB))
+                            ,dimnames = dimnames(start.SRB))
+                         ,A = matrix(0, nrow = nrow(as.matrix(start.A)), ncol = ncol(as.matrix( start.A))
+                            ,dimnames = dimnames(start.A)
                             )
-                         ,H = matrix(0, nrow = nrow(as.matrix(prior.mean.H)), ncol = ncol(as.matrix( prior.mean.H))
-                            ,dimnames = dimnames(prior.mean.H)
+                         ,H = matrix(0, nrow = nrow(as.matrix(start.H)), ncol = ncol(as.matrix( start.H))
+                            ,dimnames = dimnames(start.H)
                             )
                          ,aK0 = matrix(0, nrow = nrow(as.matrix( start.aK0)), ncol = ncol( as.matrix(start.aK0))
                             ,dimnames = dimnames(start.aK0)
                             )
-                         ,baseline.count = matrix(0, nrow = nrow(as.matrix( measure.b))
-                            ,dimnames = dimnames( measure.b)
+                         ,baseline.count = matrix(0, nrow = nrow(as.matrix( start.b))
+                            ,dimnames = dimnames( start.b)
                             )
-                         )
+                         ,sigmasq.f = 0
+                         ,sigmasq.s = 0
+                         ,sigmasq.SRB = 0
 
+                         )
 
         #.. Count how often surv probs are outside tolerance
 
-        s.out.tol = matrix(0, nrow = nrow(measure.s), ncol = ncol(measure.s)
-                                                ,dimnames = dimnames(measure.s))
+        s.out.tol = matrix(0, nrow = nrow(start.s), ncol = ncol(start.s)
+                                                ,dimnames = dimnames(start.s))
 
         cat("done\n")
         ## -------- Initialize -------- ## Restart here in 10/19/2018
@@ -428,7 +453,7 @@ ReCAP_sampler =
 
 
         curr.proj =
-                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
+                (ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
         curr.aeri = ( getAerialCount( curr.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
 
@@ -493,25 +518,15 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
         ## -------- Begin loop ------- ##
         #...............................#
 
-        if(verb) {
-                cat("\n\ntotal iterations = ", n.iter+burn.in
-                        ,"\nburn in = ", burn.in
-                        ,"\nthin = ", thin.by
-                        ,",\nnumber stored = ", n.stored, sep = "")
-                cat("\n\nfert.rows = ", which(fert.rows)
-                        )
-                cat("\n\n"
-                        ,"iter ", " quantity\n", "---- ", " --------"
-                        ,sep = "")
-        }
+
         cat("done\n")
         cat("Start sampling...\n")
         for(i in 1:(n.iter + burn.in)) {
@@ -529,12 +544,12 @@ ReCAP_sampler =
             # - Proposal
 
             #.. cycle through components
-            for(j in 1:length(log.curr.f[fert.rows,])) {
+            for(j in 1:length(log.curr.f)) {
 
                 #.. make a matrix conformable w fertility rate matrix
                 log.prop.f.mat =
                         matrix(0, nrow = nrow(log.curr.f), ncol = ncol(log.curr.f))
-                log.prop.f.mat[fert.rows,][j] =
+                log.prop.f.mat[j] =
                         rnorm(1, 0, sqrt(prop.vars$Fec[j])) #pop vars col names
 
                 #.. make proposal
@@ -550,7 +565,7 @@ ReCAP_sampler =
                             assump[[i]] %*% aK0[[i]]
                 },aK0 = curr.aK0,assump = aK0_assump)
 
-                full.proj =(ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.prop.f.full)#<- use proposal
+                full.proj =(ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.prop.f.full)#<- use proposal
                                 , SRB = invlogit(logit.curr.SRB.full)
                                 , aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
@@ -559,8 +574,8 @@ ReCAP_sampler =
                 if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest))
                      || is.nan(sum(full.proj$Harvest))) {
                         if(i > burn.in) {
-                                pop.negative$fert.rate[j] =
-                                        pop.negative$fert.rate[j] + 1/n.iter
+                                pop.negative$Fec[j] =
+                                        pop.negative$Fec[j] + 1/n.iter
                         }
                 } else {
 
@@ -627,9 +642,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
                         
@@ -641,14 +656,14 @@ ReCAP_sampler =
                     # - Move or stay
                     #.. stay if acceptance ratio 0, missing, infinity, etc.
                     if(is.na(ar) || is.nan(ar) || ar < 0) {
-                        if(i > burn.in) ar.na$fert.rate[j] =
-                                ar.na$fert.rate[j] + 1/n.iter
+                        if(i > burn.in) ar.na$Fec[j] =
+                                ar.na$Fec[j] + 1/n.iter
                     } else {
                         #.. if accept, update current fert rates, store proposed
                         #     rate, update current projection and count acceptance
                         if(runif(1) <= ar) {
-                            if(i > burn.in) acc.count$fert.rate[j] =
-                                    acc.count$fert.rate[j] + 1/n.iter
+                            if(i > burn.in) acc.count$Fec[j] =
+                                    acc.count$Fec[j] + 1/n.iter
                             log.curr.f = log.prop.f
                             curr.proj = full.proj
                             curr.aeri = (prop.aeri)
@@ -665,7 +680,7 @@ ReCAP_sampler =
 
             #.. Store proposed fertility rate matrix
             if(k %% 1 == 0 && k > 0) fert.rate.mcmc[k,] =
-                    as.vector(exp(log.curr.f[fert.rows,]))
+                    as.vector(exp(log.curr.f))
         }
         # pause 0519
             ##...... Survival ......##
@@ -713,15 +728,15 @@ ReCAP_sampler =
 
 
                         full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.prop.s.full)#<- use proposal
+                                (ProjectionFunction(Surv = invlogit(logit.prop.s.full)#<- use proposal
                                 , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
                         if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest))
                              || is.nan(sum(full.proj$Harvest))) {
                                 if(i > burn.in) {
-                                        pop.negative$surv.prop[j] =
-                                                pop.negative$surv.prop[j] + 1/n.iter
+                                        pop.negative$Surv[j] =
+                                                pop.negative$Surv[j] + 1/n.iter
                                 }
                         } else {
 
@@ -788,9 +803,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
 
@@ -801,14 +816,14 @@ ReCAP_sampler =
                         # - Move or stay
                         #.. stay if acceptance ratio 0, missing, infinity, etc.
                         if(is.na(ar) || is.nan(ar) || ar < 0) {
-                            if(i > burn.in) ar.na$surv.prop[j] =
-                                    ar.na$surv.prop[j] + 1/n.iter
+                            if(i > burn.in) ar.na$Surv[j] =
+                                    ar.na$Surv[j] + 1/n.iter
                         } else {
                             #.. if accept, update current surv rates,
                             #     update current projection and count acceptance
                             if(runif(1) <= ar) {
-                                if(i > burn.in) acc.count$surv.prop[j] =
-                                        acc.count$surv.prop[j] + 1/n.iter
+                                if(i > burn.in) acc.count$Surv[j] =
+                                        acc.count$Surv[j] + 1/n.iter
                                 logit.curr.s = logit.prop.s
                                 curr.proj = full.proj
                                 curr.aeri = (prop.aeri)
@@ -873,7 +888,7 @@ ReCAP_sampler =
 
 
                         full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full)
+                                (ProjectionFunction(Surv = invlogit(logit.curr.s.full)
                                 , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.prop.SRB.full)#<- use proposal
                                 , aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
@@ -881,8 +896,8 @@ ReCAP_sampler =
                         if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest ))
                              || is.nan(sum(full.proj$Harvest ))) {
                                 if(i > burn.in) {
-                                        pop.negative$surv.prop[j] =
-                                                pop.negative$surv.prop[j] + 1/n.iter
+                                        pop.negative$Surv[j] =
+                                                pop.negative$Surv[j] + 1/n.iter
                                 }
                         } else {
 
@@ -950,9 +965,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
 
@@ -1025,15 +1040,15 @@ ReCAP_sampler =
 
 
                         full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar =( invlogit(logit.prop.H.full))#<- use proposal
+                                (ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar =( invlogit(logit.prop.H.full))#<- use proposal
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
                         if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
                              || is.nan(sum(full.proj$Harvest ))) {
                                 if(i > burn.in) {
-                                        pop.negative$surv.prop[j] =
-                                                pop.negative$surv.prop[j] + 1/n.iter
+                                        pop.negative$Surv[j] =
+                                                pop.negative$Surv[j] + 1/n.iter
                                 }
                         } else {
 
@@ -1100,9 +1115,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
 
@@ -1167,7 +1182,7 @@ ReCAP_sampler =
 
 
                 full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full)
+                                (ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full)
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
@@ -1241,9 +1256,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
 
@@ -1301,15 +1316,15 @@ ReCAP_sampler =
 
 
                      full.proj =
-                                (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = prop.aK0.full#<- use proposal
+                                (ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = prop.aK0.full#<- use proposal
                                 , global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
                      if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
                              || is.nan(sum(full.proj$Harvest ))) {
                                 if(i > burn.in) {
-                                        pop.negative$surv.prop[j] =
-                                                pop.negative$surv.prop[j] + 1/n.iter
+                                        pop.negative$Surv[j] =
+                                                pop.negative$Surv[j] + 1/n.iter
                                 }
                         }
                      else {
@@ -1376,9 +1391,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
 
@@ -1453,7 +1468,7 @@ ReCAP_sampler =
 
 
 
-                full.proj =(ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full), SRB = invlogit(logit.curr.SRB.full),Fec=exp(log.curr.f.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.prop.b)    #<- use proposal
+                full.proj =(ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full), SRB = invlogit(logit.curr.SRB.full),Fec=exp(log.curr.f.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.prop.b)    #<- use proposal
                                 , period = proj.periods, nage = nage))
 
 
@@ -1528,9 +1543,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
 
@@ -1580,7 +1595,7 @@ ReCAP_sampler =
 
             ##...... Fertility rate ......##
             if(estFec){ # if not est Fer, this is not needed
-                prop.sigmasq.f = rinvGamma(1, al.f + length(measure.f[fert.rows,])/2-sum(is.na(measure.f))/2,be.f + 0.5*sum((log.curr.f[fert.rows,] -log.measure.f[fert.rows,])^2,na.rm = T))
+                prop.sigmasq.f = rinvGamma(1, al.f + length(measure.f)/2-sum(is.na(measure.f))/2,be.f + 0.5*sum((log.curr.f -log.measure.f)^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
         log.prop.posterior =
@@ -1639,9 +1654,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = prop.sigmasq.f #<- use proposal
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
 
@@ -1653,12 +1668,12 @@ ReCAP_sampler =
             ar = acc.ra.var(log.prop.post = log.prop.posterior
                                                          ,log.curr.post = log.curr.posterior
                                                          ,log.prop.var = dinvGamma(prop.sigmasq.f
-                                                            ,al.f + length(measure.f[fert.rows,])/2
-                                                            ,be.f + 0.5*sum((log.curr.f[fert.rows,] - log.measure.f[fert.rows,])^2)
+                                                            ,al.f + length(measure.f)/2
+                                                            ,be.f + 0.5*sum((log.curr.f - log.measure.f)^2)
                                                             ,log = TRUE)
                                                          ,log.curr.var = dinvGamma(curr.sigmasq.f
-                                                            ,al.f + length(measure.f[fert.rows,])/2
-                                                            ,be.f + 0.5*sum((log.curr.f[fert.rows,] - log.measure.f[fert.rows,])^2)
+                                                            ,al.f + length(measure.f)/2
+                                                            ,be.f + 0.5*sum((log.curr.f - log.measure.f)^2)
                                                             ,log = TRUE)
                                                          )
 
@@ -1743,9 +1758,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = prop.sigmasq.s #<- use proposal
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
             #- Acceptance ratio
@@ -1841,9 +1856,9 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = prop.sigmasq.SRB #<- use proposal
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
                                                         #　both harvest and aerial count, as well as vital rates
-                                             ,non.zero.fert = fert.rows # tell algorithm where the fert has to be 0
+                                              # tell algorithm where the fert has to be 0
                                              )
 
 
@@ -1894,7 +1909,7 @@ ReCAP_sampler =
                 },aK0 = curr.aK0,assump = aK0_assump)
 
 
-                full.proj = (ProjectHarvest(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
+                full.proj = (ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
                 full.aeri = getAerialCount( full.proj,A = invlogit(logit.curr.A.full))
                 
@@ -1927,7 +1942,7 @@ ReCAP_sampler =
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
-                                                                        ,non.zero.fert = fert.rows)
+                                                                        )
 
                   }
 
@@ -2045,7 +2060,7 @@ ReCAP_sampler =
                            ,prior.mean.Aerial.detection = prior.mean.A
                            ,prior.mean.Harvest.proportion = prior.mean.H
 
-                           ,measure.baseline.count = measure.b
+                           #,measure.baseline.count = measure.b
                            ,prior.mean.Harv.data = Harv.data
                            ,Aerial.data = Aerial.data
                            ,Assumptions = Assumptions

@@ -11,6 +11,24 @@ Check_assumptions = function(Assumptions, nage, proj.period){
 
 }
 
+Check_prior_measurement_err = function(obj){
+	if(is.null(obj$Alpah$Fec)) obj$Alpah$Fec = 1
+	if(is.null(obj$Beta$Fec)) obj$Beta$Fec = .1
+	if(is.null(obj$Alpah$Surv)) obj$Alpah$Surv = 1
+	if(is.null(obj$Beta$Surv)) obj$Beta$Surv = .1
+	if(is.null(obj$Alpah$SRB)) obj$Alpah$SRB = 1
+	if(is.null(obj$Beta$SRB)) obj$Beta$SRB = .05
+	return(obj)
+	
+}
+
+Check_start_measurement_err = function(obj){
+	if(is.null(obj$Fec)) obj$Fec = .05
+	if(is.null(obj$Surv)) obj$Surv = .05
+	if(is.null(obj$SRB)) obj$SRB = .05
+
+	return(obj)
+}
 
 Check_observations = function(Observations, nage){
 	if(is.null(Observations$Fec)) Assumptions$Fec = eyes(nage[1])
@@ -168,10 +186,10 @@ log.lhood_popu =function(n.census, n.hat){
 
 log.lhood_vital = function(f, s, SRB,estFec,measure.f, measure.s, measure.SRB
 						   ,sigmasq.f, sigmasq.s, sigmasq.SRB
-						   ,non.zero.fert){
+						   ){
 	if(estFec)
-	log.f.lhood = dnorm(as.vector(measure.f[non.zero.fert,])
-                        , mean = as.vector(f[non.zero.fert,])
+	log.f.lhood = dnorm(as.vector(measure.f)
+                        , mean = as.vector(f)
                         , sd = sqrt(sigmasq.f)
                         , log = TRUE)
 	else log.f.lhood = 0
