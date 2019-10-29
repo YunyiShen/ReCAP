@@ -1,14 +1,14 @@
 ### --------------------------- SAMPLER --------------------------- ###
 ### --------------------------------------------------------------- ###
-
+## You need to modify the M-H step, since you want vital rates to be Xbeta
 ReCAP_sampler =
         function( Harv.data
                          , Aerial.data
                          , nage
-                         #.. fixed prior means
+                         # measurements of vitals
                          , measure.f, measure.s, measure.SRB
                          , prior.mean # list, with entry named Fec, Surv, SRB, Harv, AerialDet
-				 		 , prior.var # list, with entry named Fec, Surv, SRB, Harv, AerialDet
+		         , prior.var # list, with entry named Fec, Surv, SRB, Harv, AerialDet
                          , priors.ageclass = list() # age classes in prior, list, with entry named Fec, Surv, SRB, Harv, AerialDet
                          , Aerialcount_time = "post"
                          , n.iter=50000, burn.in = 5000, thin.by = 10
@@ -95,27 +95,27 @@ ReCAP_sampler =
            ) stop("    Make sure prior mean and var have same lenght.\n")
         
         
-        if(prior.mean.f != 1 & prior.mean.f != nage[1]){
-           prior.mean.f = priors.ageclass$f %*%  prior.mean.f
-           prior.var.f = priors.ageclass$f %*%  prior.var.f
+        if(length(prior.mean.f) != 1 & length(prior.mean.f) != nage[1]){
+           prior.mean.f = priors.ageclass$Fec %*%  prior.mean.f
+           prior.var.f = priors.ageclass$Fec %*%  prior.var.f
         }
                 
         
-        if(prior.mean.f != 1 & prior.mean.f != sum(nage)){
-           prior.mean.s = priors.ageclass$s %*%  prior.mean.s
-           prior.var.s = priors.ageclass$s %*%  prior.var.s
+        if(length(prior.mean.s) != 1 & length(prior.mean.s) != sum(nage)){
+           prior.mean.s = priors.ageclass$Surv %*%  prior.mean.s
+           prior.var.s = priors.ageclass$Surv %*%  prior.var.s
         }   
                 
-        if(prior.mean.SRB != 1){
+        if(length(prior.mean.SRB) != 1){
            stop("    SRB is assumed to have no age structure.\n")
         }
                 
-        if(prior.mean.H != 1 & prior.mean.H != sum(nage)){
-           prior.mean.H = priors.ageclass$H %*%  prior.mean.H
-           prior.var.H = priors.ageclass$H %*%  prior.var.H
+        if(length(prior.mean.H) != 1 & length(prior.mean.H) != sum(nage)){
+           prior.mean.H = priors.ageclass$Harv %*%  prior.mean.H
+           prior.var.H = priors.ageclass$Harv %*%  prior.var.H
         }
                 
-        if(prior.mean.A != 1 ){
+        if(length(prior.mean.A) != 1 ){
            stop("    Aerial detection count is assumed to have no age structure.\n")
         }  
                 
@@ -135,11 +135,11 @@ ReCAP_sampler =
        
         
                 
-        start.f = random_beta(Designs$Fec, Assumption$Fec, nage,proj.periods)
-        srart.s = random_beta(Designs$Surv, Assumption$Surv,nage,proj.periods)
-        srart.SRB = random_beta(Designs$SRB, Assumption$SRB,nage,proj.periods)
-        srart.H = random_beta(Designs$Harv, Assumption$Harv,nage,proj.periods+1)
-        srart.A = random_beta(Designs$AerialDet, Assumption$AerialDet,nage,proj.periods+1)        
+        start.f.beta = random_beta(Designs$Fec, Assumption$Fec, nage,proj.periods)
+        srart.s.beta = random_beta(Designs$Surv, Assumption$Surv,nage,proj.periods)
+        srart.SRB.beta = random_beta(Designs$SRB, Assumption$SRB,nage,proj.periods)
+        srart.H.beta = random_beta(Designs$Harv, Assumption$Harv,nage,proj.periods+1)
+        srart.A.beta = random_beta(Designs$AerialDet, Assumption$AerialDet,nage,proj.periods+1)        
                 
         
         start.sigmasq.f = start.measurement.err$Fec
@@ -191,7 +191,7 @@ ReCAP_sampler =
         if(estFec){
             fert.rate.mcmc =
                     mcmc(matrix(nrow = n.stored
-                             ,ncol = length(start.f))
+                             ,ncol = length(start.f.beta))
                              ,start = burn.in + 1
                              ,thin = thin.by
                              )
@@ -202,7 +202,7 @@ ReCAP_sampler =
             # Survival proportions
         surv.prop.mcmc =
                     mcmc(matrix(nrow = n.stored
-                             ,ncol = length(start.s))
+                             ,ncol = length(start.s.beta))
                              ,start = burn.in + 1
                              ,thin = thin.by
                              )
@@ -210,7 +210,7 @@ ReCAP_sampler =
              # Sex Ratio at Birth
         SRB.mcmc =
                     mcmc(matrix(nrow = n.stored
-                             ,ncol = length(start.SRB))
+                             ,ncol = length(start.SRB.beta))
                              ,start = burn.in + 1
                              ,thin = thin.by
                              )
@@ -306,22 +306,22 @@ ReCAP_sampler =
         #.. Record acceptance rate
 
         acc.count =
-                list(Fec = matrix(0, nrow = nrow(as.matrix( start.f))
-                         ,ncol = ncol(as.matrix( start.f))
-                         ,dimnames = dimnames(( start.f))
+                list(Fec = matrix(0, nrow = nrow(as.matrix( start.f.beta))
+                         ,ncol = ncol(as.matrix( start.f.beta))
+                         ,dimnames = dimnames(( start.f.beta))
                          )
-                         ,Surv = matrix(0, nrow = nrow(as.matrix( start.s))
-                            ,ncol = ncol(as.matrix( start.s))
-                            ,dimnames = dimnames(start.s)
+                         ,Surv = matrix(0, nrow = nrow(as.matrix( start.s.beta))
+                            ,ncol = ncol(as.matrix( start.s.beta))
+                            ,dimnames = dimnames(start.s.beta)
                             )
-                         ,SRB = matrix(0, nrow = nrow(as.matrix( start.SRB))
-                            ,ncol = ncol(as.matrix( start.SRB))
-                            ,dimnames = dimnames(start.SRB))
-                         ,A = matrix(0, nrow = nrow(as.matrix(start.A)), ncol = ncol(as.matrix( start.A))
-                            ,dimnames = dimnames(start.A)
+                         ,SRB = matrix(0, nrow = nrow(as.matrix( start.SRB.beta))
+                            ,ncol = ncol(as.matrix( start.SRB.beta))
+                            ,dimnames = dimnames(start.SRB.beta))
+                         ,A = matrix(0, nrow = nrow(as.matrix(start.A.beta)), ncol = ncol(as.matrix( start.A.beta))
+                            ,dimnames = dimnames(start.A.beta)
                             )
-                         ,H = matrix(0, nrow = nrow(as.matrix(start.H)), ncol = ncol(as.matrix( start.H))
-                            ,dimnames = dimnames(start.H)
+                         ,H = matrix(0, nrow = nrow(as.matrix(start.H.beta)), ncol = ncol(as.matrix( start.H.beta))
+                            ,dimnames = dimnames(start.H.beta)
                             )
                          ,aK0 = matrix(0, nrow = nrow(as.matrix( start.aK0)), ncol = ncol( as.matrix(start.aK0))
                             ,dimnames = dimnames(start.aK0)
@@ -344,22 +344,22 @@ ReCAP_sampler =
         #.. Count how often projection gives negative population
 
         pop.negative =
-                list(Fec = matrix(0, nrow = nrow(as.matrix( start.f))
-                         ,ncol = ncol(as.matrix( start.f))
-                         ,dimnames = dimnames(( start.f))
+                list(Fec = matrix(0, nrow = nrow(as.matrix( start.f.beta))
+                         ,ncol = ncol(as.matrix( start.f.beta))
+                         ,dimnames = dimnames(( start.f.beta))
                          )
-                         ,Surv = matrix(0, nrow = nrow(as.matrix( start.s))
-                            ,ncol = ncol(as.matrix( start.s))
-                            ,dimnames = dimnames(start.s)
+                         ,Surv = matrix(0, nrow = nrow(as.matrix( start.s.beta))
+                            ,ncol = ncol(as.matrix( start.s.beta))
+                            ,dimnames = dimnames(start.s.beta)
                             )
-                         ,SRB = matrix(0, nrow = nrow(as.matrix( start.SRB))
-                            ,ncol = ncol(as.matrix( start.SRB))
-                            ,dimnames = dimnames(start.SRB))
-                         ,A = matrix(0, nrow = nrow(as.matrix(start.A)), ncol = ncol(as.matrix( start.A))
-                            ,dimnames = dimnames(start.A)
+                         ,SRB = matrix(0, nrow = nrow(as.matrix( start.SRB.beta))
+                            ,ncol = ncol(as.matrix( start.SRB.beta))
+                            ,dimnames = dimnames(start.SRB.beta))
+                         ,A = matrix(0, nrow = nrow(as.matrix(start.A.beta)), ncol = ncol(as.matrix( start.A.beta))
+                            ,dimnames = dimnames(start.A.beta)
                             )
-                         ,H = matrix(0, nrow = nrow(as.matrix(start.H)), ncol = ncol(as.matrix( start.H))
-                            ,dimnames = dimnames(start.H)
+                         ,H = matrix(0, nrow = nrow(as.matrix(start.H.beta)), ncol = ncol(as.matrix( start.H.beta))
+                            ,dimnames = dimnames(start.H.beta)
                             )
                          ,aK0 = matrix(0, nrow = nrow(as.matrix( start.aK0)), ncol = ncol( as.matrix(start.aK0))
                             ,dimnames = dimnames(start.aK0)
@@ -375,8 +375,8 @@ ReCAP_sampler =
 
         #.. Count how often surv probs are outside tolerance
 
-        s.out.tol = matrix(0, nrow = nrow(start.s), ncol = ncol(start.s)
-                                                ,dimnames = dimnames(start.s))
+        s.out.tol = matrix(0, nrow = nrow(start.s.beta), ncol = ncol(start.s.beta)
+                                                ,dimnames = dimnames(start.s.beta))
 
         cat("done\n")
         ## -------- Initialize -------- ## Restart here in 10/19/2018
@@ -384,23 +384,29 @@ ReCAP_sampler =
         #.. Set current vitals and variances to inital values
         #     Take logs/logits here where required
         if(estFec){
-            log.curr.f = log(start.f)    #<- log(0) stored as "-Inf". Gets
-            log.prop.f = log(start.f)    #        converted to 0 under exponentiation
+            log.curr.f = Designs$Fec %*% (start.f)    #linear regression
+            #log.prop.f = log.curr.f    #        converted to 0 under exponentiation
 
         }
         else{
-            log.curr.f =    (!estFec)*log(start.f) #<- log(0) stored as "-Inf". Gets
-            log.prop.f =    (!estFec)*log(start.f) #        converted to 0 under exponentiation
+            log.curr.f =    (!estFec)*(Designs$Fec%*%start.f) #<- log(0) stored as "-Inf". Gets
+            #log.prop.f =    log.curr.f #        converted to 0 under exponentiation
         }
-        logit.curr.s = logitf(start.s)
-        logit.curr.SRB = logitf(start.SRB)
-        logit.curr.H = logitf(start.H)
-        logit.curr.A = logitf(start.A)
+                                     
+        curr.f.beta = start.f.beta
+        curr.s.beta = start.s.beta        
+        curr.SRB.beta = start.SRB.beta
+        curr.A.beta = start.A.beta
+        curr.H.beta = start.H.beta 
+                                     
+        logit.curr.s = Designs$Surv%*%(curr.s.beta)
+        logit.curr.SRB = Designs$SRB%*%(curr.SRB.beta)
+        logit.curr.A = Designs$AerialDet%*%(curr.A.beta)
+        logit.curr.A = Designs$Harv%*% curr.H.beta
         curr.aK0=(start.aK0)
-        #curr.aK0=(aK0)}
-        #curr.aK0 = estaK0 * log(start.aK0) + (!estaK0) * log(K0)
         log.curr.b = log(start.b)
-
+                                    
+                                     
         curr.sigmasq.f = start.sigmasq.f
         curr.sigmasq.s = start.sigmasq.s
         curr.sigmasq.SRB = start.sigmasq.SRB
@@ -547,23 +553,19 @@ ReCAP_sampler =
             for(j in 1:length(log.curr.f)) {
 
                 #.. make a matrix conformable w fertility rate matrix
-                log.prop.f.mat =
-                        matrix(0, nrow = nrow(log.curr.f), ncol = ncol(log.curr.f))
-                log.prop.f.mat[j] =
+                prop.f.beta.mat =
+                        matrix(0, nrow = nrow(curr.f.beta), ncol = ncol(curr.f.beta))
+                prop.f.beta.mat[j] =
                         rnorm(1, 0, sqrt(prop.vars$Fec[j])) #pop vars col names
 
                 #.. make proposal
-                log.prop.f = log.curr.f + log.prop.f.mat
+                prop.f.beta = curr.f.beta + prop.f.beta.mat
+                log.prop.f = Designs$Fec %*% (prop.f.beta)
                 # - Run CCMP (project on the original scale)
                 #     ** Don't allow negative population
-                logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
+                
                 log.prop.f.full = Fec_assump$age %*% log.prop.f %*% Fec_assump$time
-                logit.curr.H.full = Harv_assump$age %*% logit.curr.H %*%Harv_assump$time
-                logit.curr.SRB.full = SRB_assump$age %*% logit.curr.SRB %*%SRB_assump$time
-                logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
-                curr.aK0.full = lapply(1:length(aK0_assump),function(i,aK0,assump){
-                            assump[[i]] %*% aK0[[i]]
-                },aK0 = curr.aK0,assump = aK0_assump)
+                
 
                 full.proj =(ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.prop.f.full)#<- use proposal
                                 , SRB = invlogit(logit.curr.SRB.full)
@@ -663,11 +665,13 @@ ReCAP_sampler =
                         #     rate, update current projection and count acceptance
                         if(runif(1) <= ar) {
                             if(i > burn.in) acc.count$Fec[j] =
-                                    acc.count$Fec[j] + 1/n.iter
-                            log.curr.f = log.prop.f
-                            curr.proj = full.proj
-                            curr.aeri = (prop.aeri)
-                            log.curr.posterior = log.prop.posterior # change log curr
+                                acc.count$Fec[j] + 1/n.iter
+                                curr.f.beta = prop.f.beta
+                                log.curr.f = log.prop.f
+                                log.curr.f.full=log.prop.f.full
+                                curr.proj = full.proj
+                                curr.aeri = (prop.aeri)
+                                log.curr.posterior = log.prop.posterior # change log curr
                         }
                         #.. if reject, leave current fert rates and projections
                         #     alone
@@ -695,13 +699,14 @@ ReCAP_sampler =
                 #.. make a matrix conformable w rate matrix
                 ##     this is a strange structure inherite from popReconstruct
                 ##     the logit.prop.s.mat renew every loop, do not know why they do this.
-                logit.prop.s.mat =
-                        matrix(0, nrow = nrow(logit.curr.s)
-                                     ,ncol = ncol(logit.curr.s)) # this result depends on whether time-homo assumed.
-                logit.prop.s.mat[j] = rnorm(1, 0, sqrt(prop.vars$Surv[j]))
+                prop.s.beta.mat =
+                        matrix(0, nrow = nrow(curr.s.beta), ncol = ncol(curr.s.beta))
+                prop.s.beta.mat[j] =
+                        rnorm(1, 0, sqrt(prop.vars$Surv[j])) #pop vars col names
 
                 #.. make proposal
-                logit.prop.s = logit.curr.s + logit.prop.s.mat
+                prop.s.beta = curr.s.beta + prop.s.beta.mat
+                logit.prop.s = Designs$Surv %*% (prop.s.beta)
 
                 #.. If proposal resulted in back-transformed s = 0 or 1, do
                 #     nothing
@@ -717,13 +722,7 @@ ReCAP_sampler =
                     #     ** Don't allow negative population; again, simply treat
                     #            this as if the proposal were never made
                         logit.prop.s.full = Surv_assump$age %*% logit.prop.s %*%Surv_assump$time
-                        log.curr.f.full = Fec_assump$age %*% log.curr.f %*% Fec_assump$time
-                        logit.curr.H.full = Harv_assump$age %*% logit.curr.H %*%Harv_assump$time
-                        logit.curr.SRB.full = SRB_assump$age %*% logit.curr.SRB %*%SRB_assump$time
-                        logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
-                        curr.aK0.full = lapply(1:length(aK0_assump),function(i,aK0,assump){
-                            assump[[i]] %*% aK0[[i]]
-                        },aK0 = curr.aK0,assump = aK0_assump)
+                        
 
 
 
@@ -823,11 +822,13 @@ ReCAP_sampler =
                             #     update current projection and count acceptance
                             if(runif(1) <= ar) {
                                 if(i > burn.in) acc.count$Surv[j] =
-                                        acc.count$Surv[j] + 1/n.iter
-                                logit.curr.s = logit.prop.s
-                                curr.proj = full.proj
-                                curr.aeri = (prop.aeri)
-                                log.curr.posterior = log.prop.posterior
+                                    acc.count$Surv[j] + 1/n.iter
+                                    curr.s.beta = prop.s.beta
+                                    logit.curr.s = logit.prop.s
+                                    logit.curr.s.full = logit.prop.s.full
+                                    curr.proj = full.proj
+                                    curr.aeri = (prop.aeri)
+                                    log.curr.posterior = log.prop.posterior
                             }
 
                         } # close else{ after checking for undefined ar
@@ -854,13 +855,14 @@ ReCAP_sampler =
 
             #.. cycle through components
             for(j in 1:length(logit.curr.SRB)) {
-                logit.prop.SRB.mat =
-                        matrix(0, nrow = nrow(logit.curr.SRB)
-                                     ,ncol = ncol(logit.curr.SRB)) # this result depends on whether time-homo assumed.
-                logit.prop.SRB.mat[j] = rnorm(1, 0, sqrt(prop.vars$SRB[j]))
+                prop.SRB.beta.mat =
+                        matrix(0, nrow = nrow(curr.SRB.beta)
+                                     ,ncol = ncol(curr.SRB.beta)) # this result depends on whether time-homo assumed.
+                prop.SRB.beta.mat[j] = rnorm(1, 0, sqrt(prop.vars$SRB[j]))
 
                 #.. make proposal
-                logit.prop.SRB = logit.curr.SRB + logit.prop.SRB.mat
+                prop.SRB.beta = curr.SRB.beta + prop.SRB.beta.mat
+                logit.prop.SRB = Designs$SRB %*% prop.SRB.beta
 
                 #.. If proposal resulted in back-transformed s = 0 or 1, do
                 #     nothing
@@ -875,14 +877,9 @@ ReCAP_sampler =
                     #  (project on the original scale)
                     #     ** Don't allow negative population; again, simply treat
                     #            this as if the proposal were never made
-                        logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
-                        log.curr.f.full = Fec_assump$age %*% log.curr.f %*% Fec_assump$time
-                        logit.curr.H.full = Harv_assump$age %*% logit.curr.H %*%Harv_assump$time
+                        
                         logit.prop.SRB.full = SRB_assump$age %*% logit.prop.SRB %*%SRB_assump$time
-                        logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
-                        curr.aK0.full = lapply(1:length(aK0_assump),function(i,aK0,assump){
-                            assump[[i]] %*% aK0[[i]]
-                        },aK0 = curr.aK0,assump = aK0_assump)
+                        
 
 
 
@@ -986,11 +983,13 @@ ReCAP_sampler =
                             #     update current projection and count acceptance
                             if(runif(1) <= ar) {
                                 if(i > burn.in) acc.count$SRB[j] =
-                                        acc.count$SRB[j] + 1/n.iter
-                                        logit.curr.SRB = logit.prop.SRB
-                                        curr.proj = full.proj
-                                        curr.aeri = (prop.aeri)
-                                        log.curr.posterior = log.prop.posterior
+                                    acc.count$SRB[j] + 1/n.iter
+                                    logit.curr.SRB.full = logit.prop.SRB.full
+                                    logit.curr.SRB = logit.prop.SRB
+                                    curr.SRB.beta = prop.SRB.beta
+                                    curr.proj = full.proj
+                                    curr.aeri = (prop.aeri)
+                                    log.curr.posterior = log.prop.posterior
                             }
 
                         } # close else{ after checking for undefined ar
@@ -1012,31 +1011,27 @@ ReCAP_sampler =
             if(verb && identical(i%%1000, 0)) cat("\n", i, " Harvesting")
 
             # - Proposal
-
+## Design Mat pause here 10/21/2019
             #.. cycle through components
             for(j in 1:length(logit.curr.H)) {
-
-                #.. make a matrix conformable w rate matrix
-                prop.H.mat =
-                        0*logit.curr.H
-                prop.H.mat[j] = rnorm(1, 0, sqrt(prop.vars$Harv[j])) # if need age-imspecific harvest, simply give a 1 by 1 start.H
+                prop.H.beta.mat =
+                        matrix(0, nrow = nrow(curr.H.beta)
+                                     ,ncol = ncol(curr.H.beta)) # this result depends on whether time-homo assumed.
+                prop.H.beta.mat[j] = rnorm(1, 0, sqrt(prop.vars$SRB[j]))
 
                 #.. make proposal
-                logit.prop.H = logit.curr.H + prop.H.mat
+                prop.H.beta = curr.H.beta + prop.H.beta.mat
+                logit.prop.H = Designs$H %*% prop.H.beta
+
 
             # - Run CCMP (project on the original scale)
             #     ** Don't allow negative population
                 # - Run CCMP (project on the original scale)
                     #     ** Don't allow negative population; again, simply treat
                     #            this as if the proposal were never made
-                        logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
-                        log.curr.f.full = Fec_assump$age %*% log.curr.f %*% Fec_assump$time
+                        
                         logit.prop.H.full = Harv_assump$age %*% logit.prop.H %*%Harv_assump$time
-                        logit.curr.SRB.full = SRB_assump$age %*% logit.curr.SRB %*%SRB_assump$time
-                        logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
-                        curr.aK0.full = lapply(1:length(aK0_assump),function(i,aK0,assump){
-                            assump[[i]] %*% aK0[[i]]
-                        },aK0 = curr.aK0,assump = aK0_assump)
+                        
 
 
                         full.proj =
@@ -1135,11 +1130,14 @@ ReCAP_sampler =
                         #     rate, update current projection and count acceptance
                         if(runif(1) <= ar) {
                                 if(i > burn.in) acc.count$H[j] =
-                                        acc.count$H[j] + 1/n.iter
-                                logit.curr.H = logit.prop.H
-                                curr.proj = full.proj
-                                curr.aeri = (prop.aeri)
-                                log.curr.posterior = log.prop.posterior
+                                    acc.count$H[j] + 1/n.iter
+                                    logit.curr.H = logit.prop.H
+                                    curr.H.beta = prop.H.beta
+                                    logit.curr.H.full = logit.prop.H.full
+                                
+                                    curr.proj = full.proj
+                                    curr.aeri = (prop.aeri)
+                                    log.curr.posterior = log.prop.posterior
                         }
 
                 } # close else after checking for ar=na, nan, zero
@@ -1159,26 +1157,21 @@ ReCAP_sampler =
             for(j in 1:length(logit.curr.A)) {
 
                 #.. make a matrix conformable w rate matrix
-                prop.A.mat =
-                        0*logit.curr.A
-                prop.A.mat[j] = rnorm(1, 0, sqrt(prop.vars$AerialDet[j])) # if need age-imspecific harvest, simply give a 1 by 1 start.H
+                prop.A.beta.mat =
+                        matrix(0, nrow = nrow(curr.A.beta)
+                                     ,ncol = ncol(curr.A.beta)) # this result depends on whether time-homo assumed.
+                prop.A.beta.mat[j] = rnorm(1, 0, sqrt(prop.vars$SRB[j]))
 
                 #.. make proposal
-                logit.prop.A = logit.curr.A + prop.A.mat
+                prop.A.beta = curr.A.beta + prop.A.beta.mat
+                logit.prop.A = Designs$A %*% prop.A.beta
 
             # - Run CCMP (project on the original scale)
             #     ** Don't allow negative population
                 # - Run CCMP (project on the original scale)
                     #     ** Don't allow negative population; again, simply treat
                     #            this as if the proposal were never made
-                logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
-                log.curr.f.full = Fec_assump$age %*% log.curr.f %*% Fec_assump$time
-                logit.curr.H.full = Harv_assump$age %*% logit.curr.H %*%Harv_assump$time
-                logit.curr.SRB.full = SRB_assump$age %*% logit.curr.SRB %*%SRB_assump$time
                 logit.prop.A.full = A_assump$age %*% logit.prop.A %*%A_assump$time
-                curr.aK0.full = lapply(1:length(aK0_assump),function(i,aK0,assump){
-                    assump[[i]] %*% aK0[[i]]
-                },aK0 = curr.aK0,assump = aK0_assump)
 
 
                 full.proj =
@@ -1279,11 +1272,13 @@ ReCAP_sampler =
                         #     rate, update current projection and count acceptance
                         if(runif(1) <= ar) {
                                 if(i > burn.in) acc.count$A[j] =
-                                        acc.count$A[j] + 1/n.iter
-                                logit.curr.A = logit.prop.A
-                                curr.proj = full.proj
-                                curr.aeri = (prop.aeri)
-                                log.curr.posterior = log.prop.posterior
+                                    acc.count$A[j] + 1/n.iter
+                                    logit.curr.A = logit.prop.A
+                                    logit.curr.A.full = logit.prop.A.full
+                                    curr.A.beta = prop.A.beta
+                                    curr.proj = full.proj
+                                    curr.aeri = (prop.aeri)
+                                    log.curr.posterior = log.prop.posterior
                         }
 
                 } # close else after checking for ar=na, nan, zero
@@ -1304,11 +1299,6 @@ ReCAP_sampler =
                     prop.aK0 = curr.aK0
                     prop.aK0[[j]][w] = curr.aK0[[j]][w] + rnorm(1, 0, sqrt(prop.vars$aK0[[j]]))
 
-                    logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
-                    log.curr.f.full = Fec_assump$age %*% log.curr.f %*% Fec_assump$time
-                    logit.curr.H.full = Harv_assump$age %*% logit.curr.H %*%Harv_assump$time
-                    logit.curr.SRB.full = SRB_assump$age %*% logit.curr.SRB %*%SRB_assump$time
-                    logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
                     prop.aK0.full = lapply(1:length(aK0_assump),function(i,aK0,assump){
                         assump[[i]] %*% aK0[[i]]
                     },aK0 = prop.aK0,assump = aK0_assump)
@@ -1414,11 +1404,13 @@ ReCAP_sampler =
                         #     rate, update current projection and count acceptance
                         if(runif(1) <= ar) {
                                 if(i > burn.in) acc.count$K0[j] =
-                                        acc.count$aK0[j] + 1/n.iter
-                                curr.aK0 = prop.aK0
-                                curr.proj = full.proj
-                                curr.aeri=prop.aeri
-                                log.curr.posterior = log.prop.posterior
+                                    acc.count$aK0[j] + 1/n.iter
+                                    curr.aK0 = prop.aK0
+                                    curr.aK0.full = prop.aK0.full
+                                    curr.proj = full.proj
+                                    
+                                    curr.aeri=prop.aeri
+                                    log.curr.posterior = log.prop.posterior
                         }
 
                 } # close else after checking for ar=na, nan, zero
@@ -1899,15 +1891,6 @@ ReCAP_sampler =
 
 
             ## ------- Store current population ------- ##
-                logit.curr.s.full = Surv_assump$age %*% logit.curr.s %*%Surv_assump$time
-                log.curr.f.full = Fec_assump$age %*% log.curr.f %*% Fec_assump$time
-                logit.curr.H.full = Harv_assump$age %*% logit.curr.H %*%Harv_assump$time
-                logit.curr.SRB.full = SRB_assump$age %*% logit.curr.SRB %*%SRB_assump$time
-                logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
-                curr.aK0.full = lapply(1:length(aK0_assump),function(i,aK0,assump){
-                            assump[[i]] %*% aK0[[i]]
-                },aK0 = curr.aK0,assump = aK0_assump)
-
 
                 full.proj = (ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
