@@ -1,30 +1,38 @@
 ### --------------------------- SAMPLER --------------------------- ###
 ### --------------------------------------------------------------- ###
-## You need to modify the M-H step, since you want vital rates to be Xbeta
+
+
+
+#####Things to do:#####
+#Since we added variance assumption matrix, 
+#  1. MCMC object for variance need to be changed
+#  2. need to add sigma.sq_full for all three measured vital rates
+#  3. change the updating variance chunk, use assumption matrix
+#######10/31/19########
+
+
+
 ReCAP_sampler =
         function( Harv.data
                          , Aerial.data
                          , nage
                          # measurements of vitals
-                         , measure.f, measure.s, measure.SRB
+                         , measure.Fec, measure.Surv, measure.SRB
                          , prior.mean # list, with entry named Fec, Surv, SRB, Harv, AerialDet
-		         , prior.var # list, with entry named Fec, Surv, SRB, Harv, AerialDet
-                         , priors.ageclass = list() # age classes in prior, list, with entry named Fec, Surv, SRB, Harv, AerialDet
+		                 , prior.var # list, with entry named Fec, Surv, SRB, Harv, AerialDet
+                         , prior.ageclass = list() # age classes in prior, list, with entry named Fec, Surv, SRB, Harv, AerialDet
                          , Aerialcount_time = "post"
                          , n.iter=50000, burn.in = 5000, thin.by = 10
 
                          #.. fixed variance hyper-parameters
-			 , prior.measurement.err = list() # measurement error for vital rates, list with two entries are also lists, first Alpha and then Beta, each list (e.g. Alpha) has three entries called Fec, Surv and SRB
+			             , prior.measurement.err = list() # measurement error for vital rates, list with two entries are also lists, first Alpha and then Beta, each list (e.g. Alpha) has three entries called Fec, Surv and SRB
                          , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
                          , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
-                         
-                         #.. census data
-                         #     *not transformed coming in*
-                         
-                         , Assumptions = list() # Assumption matrices
-                         , Designs = list() # Design matrices rows as year, or time ingeneral, cols as covariate, then beta will have rows as covariate and cols as age classes, dependends on assumptions
+
+                         , Assumptions = list() # Assumption matrices list with entries called Fec Surv SRB Harv and AerialDet, each entry is a list with name age and time, inside which is a matrix
+                         , Designs = list() # Design matrices rows as years, or time ingeneral, cols as covariate, then beta will have rows as covariate and cols as age classes, dependends on assumptions
                          , Observations = list() # observation age classes, row as raw most detailed age, columns as age classes (e.g. fawn, yearling, adults)
-                         
+
                          #.. inital values for vitals and variances
                          #     *vitals not transformed coming in* all not transfer, will transfer later before sample and transfer back when saving
                          , start.measurement.err = list() # starting value for vital rates measurement error, entries called Fec, Surv and SRB
@@ -36,7 +44,7 @@ ReCAP_sampler =
                                      # "baseline.count"
 
                          #.. number of periods to project forward over (e.g.,
-                         #         number of projection steps, usually a year
+                         #         number of projection steps, usually number of years
                          , proj.periods = (ncol(Harv.data)-1)
 
                          #.. age group, if multiple sex, the one reproduce should be at first.
@@ -47,7 +55,7 @@ ReCAP_sampler =
                          # control parameters for the model, global is whether density dependency is global rather than age specific, null is whether exist density dependency (True of not ).
                          ,point.est = mean
                          ,ProjectionFunction = ProjectHarvest # customerize projection function, rarely used
-                 
+
                          #.. tolerance defining allowable survival probabilities, should be >0, or things is gonna die out.
                          ,s.tol = 10^(-10)
                          )
@@ -55,27 +63,27 @@ ReCAP_sampler =
         ## .............. Sampler .............. ##
         ## ..................................... ##
         ## -------- Checking input dimensions ------- ##
-        measure.f = as.matrix( measure.f)
-        measure.s = as.matrix( measure.s)
+        measure.f = as.matrix( measure.Fec)
+        measure.s = as.matrix( measure.Surv)
         measure.SRB = as.matrix( measure.SRB)
         measure.b = as.matrix( Harv.data[,1])
         Harv.data = as.matrix(Harv.data)
         Aerial.data = as.matrix(Aerial.data)
         verb = F
-		
+	prior.mean = lapply(prior.mean,as.matrix)
 	prior.mean.f = prior.mean$Fec
 	prior.mean.s = prior.mean$Surv # Historical problem, to make name of vital rates consistent
 	prior.mean.SRB = prior.mean$SRB
         prior.var.f = prior.var$Fec
 	prior.var.s = prior.var$Surv
-	prior.var.SRB  = prior.var$SRB# can give several priors for different classes, make sure compatible with prior.age class, or giving             
+	prior.var.SRB  = prior.var$SRB# can give several priors for different classes, make sure compatible with prior.age class, or giving
         prior.mean.H = prior.mean$Harv
 	prior.mean.A = prior.mean$AerialDet
 	prior.var.H = prior.var$Harv
 	prior.var.A = prior.var$AerialDet
 
-		
-			
+
+
         missing_harv = which(colSums(Harv.data)==0 |
                              colSums(is.na(Harv.data))==nrow(Harv.data)) # for missing harvest/skipped year
 
@@ -93,38 +101,38 @@ ReCAP_sampler =
            length(prior.mean.H) != length(prior.var.H)|
            length(prior.mean.A) != length(prior.var.A)
            ) stop("    Make sure prior mean and var have same lenght.\n")
-        
-        
+
+
         if(length(prior.mean.f) != 1 & length(prior.mean.f) != nage[1]){
-           prior.mean.f = priors.ageclass$Fec %*%  prior.mean.f
-           prior.var.f = priors.ageclass$Fec %*%  prior.var.f
+           prior.mean.f = prior.ageclass$Fec %*%  prior.mean.f
+           prior.var.f = prior.ageclass$Fec %*%  prior.var.f
         }
-                
-        
+
+
         if(length(prior.mean.s) != 1 & length(prior.mean.s) != sum(nage)){
-           prior.mean.s = priors.ageclass$Surv %*%  prior.mean.s
-           prior.var.s = priors.ageclass$Surv %*%  prior.var.s
-        }   
-                
+           prior.mean.s = prior.ageclass$Surv %*%  prior.mean.s
+           prior.var.s = prior.ageclass$Surv %*%  prior.var.s
+        }
+
         if(length(prior.mean.SRB) != 1){
            stop("    SRB is assumed to have no age structure.\n")
         }
-                
+
         if(length(prior.mean.H) != 1 & length(prior.mean.H) != sum(nage)){
-           prior.mean.H = priors.ageclass$Harv %*%  prior.mean.H
-           prior.var.H = priors.ageclass$Harv %*%  prior.var.H
+           prior.mean.H = prior.ageclass$Harv %*%  prior.mean.H
+           prior.var.H = prior.ageclass$Harv %*%  prior.var.H
         }
-                
+
         if(length(prior.mean.A) != 1 ){
            stop("    Aerial detection count is assumed to have no age structure.\n")
-        }  
-                
+        }
+
         Assumptions = Check_assumptions(Assumptions, nage, proj.periods)
         prop.vars = Check_prop_var(prop.vars,nage,proj.periods)
-        
+        Designs = Check_Designs(Designs,nage,proj.periods)
 	prior.measurement.err = Check_prior_measurement_err(prior.measurement.err)
-        start.measurement.err = Check_start_measurement_err(start.measurement.err)
-		
+        start.measurement.err = Check_start_measurement_err(start.measurement.err,Assumptions$Var$time)
+
         Observations = Check_observations(Observations, nage)
         errs_dim = 0
         cat("\n  Check Harvest data:\n")
@@ -132,31 +140,31 @@ ReCAP_sampler =
         cat("\n  Check Aerial count data:\n")
         Check_data(Aerial.data,1,proj.periods + 1)
         cat("All Green \n")
-       
-        
-                
-        start.f.beta = random_beta(Designs$Fec, Assumption$Fec, nage,proj.periods)
-        srart.s.beta = random_beta(Designs$Surv, Assumption$Surv,nage,proj.periods)
-        srart.SRB.beta = random_beta(Designs$SRB, Assumption$SRB,nage,proj.periods)
-        srart.H.beta = random_beta(Designs$Harv, Assumption$Harv,nage,proj.periods+1)
-        srart.A.beta = random_beta(Designs$AerialDet, Assumption$AerialDet,nage,proj.periods+1)        
-                
-        
+
+
+
+        start.f.beta = random_beta(Designs$Fec, Assumptions$Fec, nage[1],proj.periods)
+        start.s.beta = random_beta(Designs$Surv, Assumptions$Surv,sum(nage),proj.periods)
+        start.SRB.beta = random_beta(Designs$SRB, Assumptions$SRB,nage[1],proj.periods)
+        start.H.beta = random_beta(Designs$Harv, Assumptions$Harv,sum(nage),proj.periods+1)
+        start.A.beta = random_beta(Designs$AerialDet, Assumptions$AerialDet,sum(nage),proj.periods+1)
+
+
         start.sigmasq.f = start.measurement.err$Fec
         start.sigmasq.s = start.measurement.err$Surv
         start.sigmasq.SRB = start.measurement.err$SRB
-                
+
         start.b = as.matrix(Harv.data[,1])
         start.b[is.na(start.b)] = 5
         start.aK0 = min.aK0
-                
-	al.f = prior.measurement.err$Alpha$Fec 
-	be.f = prior.measurement.err$Beta$Fec 
+
+	al.f = prior.measurement.err$Alpha$Fec
+	be.f = prior.measurement.err$Beta$Fec
 	al.s = prior.measurement.err$Alpha$Surv
-	be.s = prior.measurement.err$Beta$Fec 
+	be.s = prior.measurement.err$Beta$Fec
 	al.SRB = prior.measurement.err$Alpha$SRB
-	be.SRB = prior.measurement.err$Beta$Fec 
-        
+	be.SRB = prior.measurement.err$Beta$Fec
+
         ## -------- Begin timing ------- ##
         cat("\n")
         ptm = proc.time()
@@ -276,14 +284,14 @@ ReCAP_sampler =
             # Harvest proportion, can be either time homo or not
             H.mcmc =
                     mcmc(matrix(nrow = n.stored
-                             ,ncol = length(start.H))
+                             ,ncol = length(start.H.beta))
                              ,start = burn.in + 1
                              ,thin = thin.by)
             colnames(H.mcmc) = NULL
             # Aerial counts
             A.mcmc =
                     mcmc(matrix(nrow = n.stored
-                             ,ncol = length(start.A))
+                             ,ncol = length(start.A.beta))
                              ,start = burn.in + 1
                              ,thin = thin.by)
             colnames(H.mcmc) = NULL
@@ -301,7 +309,7 @@ ReCAP_sampler =
                              ,start = burn.in + 1
                              ,thin = thin.by)
             colnames(variances.mcmc) =
-                    c("Fec.var", "Surv.var", "SRB.var") 
+                    c("Fec.var", "Surv.var", "SRB.var")
 
         #.. Record acceptance rate
 
@@ -384,35 +392,33 @@ ReCAP_sampler =
         #.. Set current vitals and variances to inital values
         #     Take logs/logits here where required
         if(estFec){
-            log.curr.f = Designs$Fec %*% (start.f)    #linear regression
+            log.curr.f = t( Designs$Fec %*% (start.f.beta) )   #linear regression
             #log.prop.f = log.curr.f    #        converted to 0 under exponentiation
 
         }
         else{
-            log.curr.f =    (!estFec)*(Designs$Fec%*%start.f) #<- log(0) stored as "-Inf". Gets
+            log.curr.f =   t( (!estFec)*(Designs$Fec%*%start.f.beta)) #<- log(0) stored as "-Inf". Gets
             #log.prop.f =    log.curr.f #        converted to 0 under exponentiation
         }
-                                     
+
         curr.f.beta = start.f.beta
-        curr.s.beta = start.s.beta        
+        curr.s.beta = start.s.beta
         curr.SRB.beta = start.SRB.beta
         curr.A.beta = start.A.beta
-        curr.H.beta = start.H.beta 
-                                     
-        logit.curr.s = Designs$Surv%*%(curr.s.beta)
-        logit.curr.SRB = Designs$SRB%*%(curr.SRB.beta)
-        logit.curr.A = Designs$AerialDet%*%(curr.A.beta)
-        logit.curr.A = Designs$Harv%*% curr.H.beta
+        curr.H.beta = start.H.beta
+
+        logit.curr.s = t( Designs$Surv%*%(curr.s.beta))
+        logit.curr.SRB = t(Designs$SRB%*%(curr.SRB.beta))
+        logit.curr.A = t(Designs$AerialDet%*%(curr.A.beta))
+        logit.curr.H = t(Designs$Harv%*% curr.H.beta)
         curr.aK0=(start.aK0)
         log.curr.b = log(start.b)
-                                    
-                                     
+
+
         curr.sigmasq.f = start.sigmasq.f
         curr.sigmasq.s = start.sigmasq.s
         curr.sigmasq.SRB = start.sigmasq.SRB
-        curr.sigmasq.A = start.sigmasq.A
-        curr.sigmasq.H = start.sigmasq.H
-        #curr.sigmasq.aK0 = start.sigmasq.aK0
+
 
 
 
@@ -422,11 +428,11 @@ ReCAP_sampler =
         log.measure.f = log(measure.f)
         logit.measure.s = logitf(measure.s)
         logit.measure.SRB = logitf(measure.SRB)
-                                     
+
         log.prior.mean.f = log(prior.mean.f)
         logit.prior.mean.s = logitf(prior.mean.s)
         logit.prior.mean.SRB = logitf(prior.mean.SRB)
-        
+
         logit.prior.mean.A = logitf(prior.mean.A)
         logit.prior.mean.H = logitf(prior.mean.H)
         log.measure.b = log(measure.b)
@@ -463,8 +469,8 @@ ReCAP_sampler =
 
         curr.aeri = ( getAerialCount( curr.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
 
-        log.curr.obs_f = log(getobsVitals(curr.proj$Fec_obs,curr.proj$living,Observations$Fec))
-        logit.curr.obs_s = logitf(getobsVitals(curr.proj$Surv_obs,curr.proj$living,Observations$Surv))
+        log.curr.obs_f = log(getobsVitals(curr.proj$Fec_obs,curr.proj$Living[1:nage[1],],Observations$Fec))
+        logit.curr.obs_s = logitf(getobsVitals(curr.proj$Surv_obs,curr.proj$Living,Observations$Surv))
 #.. Current log posterior
 
 
@@ -475,12 +481,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -489,19 +495,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -519,8 +525,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -560,12 +566,12 @@ ReCAP_sampler =
 
                 #.. make proposal
                 prop.f.beta = curr.f.beta + prop.f.beta.mat
-                log.prop.f = Designs$Fec %*% (prop.f.beta)
+                log.prop.f = t( Designs$Fec %*% (prop.f.beta))
                 # - Run CCMP (project on the original scale)
                 #     ** Don't allow negative population
-                
+
                 log.prop.f.full = Fec_assump$age %*% log.prop.f %*% Fec_assump$time
-                
+
 
                 full.proj =(ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.prop.f.full)#<- use proposal
                                 , SRB = invlogit(logit.curr.SRB.full)
@@ -582,8 +588,8 @@ ReCAP_sampler =
                 } else {
 
                     prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
-                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,full.proj$Living[1:nage[1],],Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
 
                     # - Calculate log posterior of proposed vital under projection
@@ -595,12 +601,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -609,19 +615,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -639,8 +645,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -649,8 +655,8 @@ ReCAP_sampler =
                                               # tell algorithm where the fert has to be 0
                                              )
 
-                        
-                        
+
+
                     #- Acceptance ratio
                     ar = acc.ra(log.prop = log.prop.posterior,
                                                          log.current = log.curr.posterior)
@@ -684,7 +690,7 @@ ReCAP_sampler =
 
             #.. Store proposed fertility rate matrix
             if(k %% 1 == 0 && k > 0) fert.rate.mcmc[k,] =
-                    as.vector(exp(log.curr.f))
+                    as.vector(curr.f.beta)
         }
         # pause 0519
             ##...... Survival ......##
@@ -706,7 +712,7 @@ ReCAP_sampler =
 
                 #.. make proposal
                 prop.s.beta = curr.s.beta + prop.s.beta.mat
-                logit.prop.s = Designs$Surv %*% (prop.s.beta)
+                logit.prop.s = t( Designs$Surv %*% (prop.s.beta))
 
                 #.. If proposal resulted in back-transformed s = 0 or 1, do
                 #     nothing
@@ -722,7 +728,7 @@ ReCAP_sampler =
                     #     ** Don't allow negative population; again, simply treat
                     #            this as if the proposal were never made
                         logit.prop.s.full = Surv_assump$age %*% logit.prop.s %*%Surv_assump$time
-                        
+
 
 
 
@@ -740,12 +746,12 @@ ReCAP_sampler =
                         } else {
 
                     prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
-                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,full.proj$Living[1:nage[1],],Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
 
                         # - Calculate log posterior of proposed vital under projection
-                                
+
         log.prop.posterior =
                 log.post(f = log.curr.f
                                              ,s = logit.prop.s #<- use proposal
@@ -753,12 +759,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -767,19 +773,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -797,8 +803,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -841,7 +847,7 @@ ReCAP_sampler =
 
             #.. Store proposed survival probability matrix
             if(k %% 1 == 0 && k > 0) surv.prop.mcmc[k,] =
-                as.vector(invlogit(logit.curr.s))
+                as.vector(curr.s.beta)
 
 
 
@@ -862,7 +868,7 @@ ReCAP_sampler =
 
                 #.. make proposal
                 prop.SRB.beta = curr.SRB.beta + prop.SRB.beta.mat
-                logit.prop.SRB = Designs$SRB %*% prop.SRB.beta
+                logit.prop.SRB = t( Designs$SRB %*% prop.SRB.beta)
 
                 #.. If proposal resulted in back-transformed s = 0 or 1, do
                 #     nothing
@@ -877,9 +883,9 @@ ReCAP_sampler =
                     #  (project on the original scale)
                     #     ** Don't allow negative population; again, simply treat
                     #            this as if the proposal were never made
-                        
+
                         logit.prop.SRB.full = SRB_assump$age %*% logit.prop.SRB %*%SRB_assump$time
-                        
+
 
 
 
@@ -899,13 +905,13 @@ ReCAP_sampler =
                         } else {
 
                                 prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
-                                log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-                                logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+                                log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,full.proj$Living[1:nage[1],],Observations$Fec))
+                                logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
 
                         # - Calculate log posterior of proposed vital under projection
-                           
-                                
+
+
       log.prop.posterior =
                 log.post(f = log.curr.f
                                              ,s = logit.curr.s
@@ -913,12 +919,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -927,19 +933,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -957,8 +963,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -1002,7 +1008,7 @@ ReCAP_sampler =
 
             #.. Store proposed survival probability matrix
             if(k %% 1 == 0 && k > 0) SRB.mcmc[k,] =
-                as.vector(invlogit(logit.curr.SRB))
+                as.vector(curr.SRB.beta)
 
 
 
@@ -1021,7 +1027,7 @@ ReCAP_sampler =
 
                 #.. make proposal
                 prop.H.beta = curr.H.beta + prop.H.beta.mat
-                logit.prop.H = Designs$H %*% prop.H.beta
+                logit.prop.H = t( Designs$H %*% prop.H.beta )
 
 
             # - Run CCMP (project on the original scale)
@@ -1029,9 +1035,9 @@ ReCAP_sampler =
                 # - Run CCMP (project on the original scale)
                     #     ** Don't allow negative population; again, simply treat
                     #            this as if the proposal were never made
-                        
+
                         logit.prop.H.full = Harv_assump$age %*% logit.prop.H %*%Harv_assump$time
-                        
+
 
 
                         full.proj =
@@ -1049,11 +1055,11 @@ ReCAP_sampler =
 
                     prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
 
-                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,full.proj$Living[1:nage[1],],Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
-                
-                                
+
+
         log.prop.posterior =
                 log.post(f = log.curr.f
                                              ,s = logit.curr.s
@@ -1061,12 +1067,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.prop.H #<- use proposal
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -1075,19 +1081,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -1105,8 +1111,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -1134,7 +1140,7 @@ ReCAP_sampler =
                                     logit.curr.H = logit.prop.H
                                     curr.H.beta = prop.H.beta
                                     logit.curr.H.full = logit.prop.H.full
-                                
+
                                     curr.proj = full.proj
                                     curr.aeri = (prop.aeri)
                                     log.curr.posterior = log.prop.posterior
@@ -1147,7 +1153,7 @@ ReCAP_sampler =
         } # close loop over all age-specific Harvest proportions
 
             #.. Store proposed Harvest proportion matrix
-            if(k %% 1 == 0 && k > 0) H.mcmc[k,] = as.vector(invlogit(logit.curr.H))
+            if(k %% 1 == 0 && k > 0) H.mcmc[k,] = as.vector(curr.H.beta)
 
             if(verb && identical(i%%1000, 0)) cat("\n", i, " Aerial Counts Detection")
 
@@ -1164,7 +1170,7 @@ ReCAP_sampler =
 
                 #.. make proposal
                 prop.A.beta = curr.A.beta + prop.A.beta.mat
-                logit.prop.A = Designs$A %*% prop.A.beta
+                logit.prop.A = t( Designs$A %*% prop.A.beta)
 
             # - Run CCMP (project on the original scale)
             #     ** Don't allow negative population
@@ -1188,11 +1194,11 @@ ReCAP_sampler =
                         } else {
 
                     prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.prop.A.full),obsMat = Observations$AerialCount)) #<- use proposal
-                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,full.proj$Living[1:nage[1],],Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
 
-                                
+
         log.prop.posterior =
                 log.post(f = log.curr.f
                                              ,s = logit.curr.s
@@ -1200,12 +1206,12 @@ ReCAP_sampler =
                                              ,A = logit.prop.A #<- use proposal
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -1214,19 +1220,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -1244,8 +1250,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -1256,8 +1262,8 @@ ReCAP_sampler =
 
 
 
-                                
-                                
+
+
                 #- Acceptance ratio
                 ar = acc.ra(log.prop = log.prop.posterior,
                                                      log.current = log.curr.posterior)
@@ -1288,7 +1294,7 @@ ReCAP_sampler =
         } # close loop over all age-specific Harvest proportions
 
             #.. Store proposed Harvest proportion matrix
-            if(k %% 1 == 0 && k > 0) A.mcmc[k,] = as.vector(invlogit(logit.curr.A))
+            if(k %% 1 == 0 && k > 0) A.mcmc[k,] = as.vector(curr.A.beta)
 
 
             ##...... Carrying Capacity ......##
@@ -1320,11 +1326,11 @@ ReCAP_sampler =
                      else {
 
                     prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
-                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,full.proj$Living[1:nage[1],],Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
 
-                             
+
          log.prop.posterior =
                 log.post(f = log.curr.f
                                              ,s = logit.curr.s
@@ -1332,12 +1338,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = prop.aK0 #<- use proposal
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -1346,19 +1352,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -1376,8 +1382,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
 									,estFec = estFec
 									,measure.f = log.measure.f
-									,measure.s = log.measure.s
-									,measure.SRB = log.measure.SRB
+									,measure.s = logit.measure.s
+									,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -1388,9 +1394,9 @@ ReCAP_sampler =
 
 
 
-                            
-                             
-                    
+
+
+
                 #- Acceptance ratio
                 ar = acc.ra(log.prop = log.prop.posterior, log.current = log.curr.posterior)
 
@@ -1408,7 +1414,7 @@ ReCAP_sampler =
                                     curr.aK0 = prop.aK0
                                     curr.aK0.full = prop.aK0.full
                                     curr.proj = full.proj
-                                    
+
                                     curr.aeri=prop.aeri
                                     log.curr.posterior = log.prop.posterior
                         }
@@ -1473,8 +1479,8 @@ ReCAP_sampler =
             } else {
 
                     prop.aeri = ( getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
-                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+                    log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,full.proj$Living[1:nage[1],],Observations$Fec))
+                    logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
 
                 # - Calculate log posterior of proposed vital under projection
@@ -1486,12 +1492,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -1500,19 +1506,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -1530,8 +1536,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -1542,9 +1548,9 @@ ReCAP_sampler =
 
 
 
-                    
-                    
-                    
+
+
+
                  #- Acceptance ratio
                 ar = acc.ra(log.prop = log.prop.posterior,
                                                      log.current = log.curr.posterior)
@@ -1578,16 +1584,17 @@ ReCAP_sampler =
                     as.vector(exp(log.curr.b))
 
 # TEST stop here 10/26/2018
+                ## CHANGE NEEDED: variance not necessarily has the same value each year!!
             ## ------- Variance Updates ------- ##
-            log.curr.obs_f = log(getobsVitals(curr.proj$Fec_obs,curr.proj$living,Observations$Fec))
-            logit.curr.obs_s = logitf(getobsVitals(curr.proj$Surv_obs,curr.proj$living,Observations$Surv))
+            log.curr.obs_f = log(getobsVitals(curr.proj$Fec_obs,curr.proj$Living[1:nage[1],],Observations$Fec))
+            logit.curr.obs_s = logitf(getobsVitals(curr.proj$Surv_obs,curr.proj$Living,Observations$Surv))
 
 
             if(verb && identical(i%%1000, 0)) cat("\n", i, " Variances")
 
             ##...... Fertility rate ......##
             if(estFec){ # if not est Fer, this is not needed
-                prop.sigmasq.f = rinvGamma(1, al.f + length(measure.f)/2-sum(is.na(measure.f))/2,be.f + 0.5*sum((log.curr.f -log.measure.f)^2,na.rm = T))
+                prop.sigmasq.f = rinvGamma(proj.periods, al.f + length(measure.f)/2-sum(is.na(measure.f))/2,be.f + 0.5*sum((log.curr.obs_f -log.measure.f)^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
         log.prop.posterior =
@@ -1597,12 +1604,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -1611,19 +1618,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = prop.sigmasq.f #<- use proposal
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -1637,12 +1644,12 @@ ReCAP_sampler =
                                                                 ,n.hat = curr.aeri#<- use current
                                                                 ) +
                                                         log.lhood_vital(f = log.curr.obs_f
-                                                                        ,s = log.curr.obs_s
+                                                                        ,s = logit.curr.obs_s
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = prop.sigmasq.f #<- use proposal
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -1654,18 +1661,18 @@ ReCAP_sampler =
 
 
 
-                    
+
 
             #- Acceptance ratio
             ar = acc.ra.var(log.prop.post = log.prop.posterior
                                                          ,log.curr.post = log.curr.posterior
                                                          ,log.prop.var = dinvGamma(prop.sigmasq.f
                                                             ,al.f + length(measure.f)/2
-                                                            ,be.f + 0.5*sum((log.curr.f - log.measure.f)^2)
+                                                            ,be.f + 0.5*sum((log.curr.obs_f - log.measure.f)^2)
                                                             ,log = TRUE)
                                                          ,log.curr.var = dinvGamma(curr.sigmasq.f
                                                             ,al.f + length(measure.f)/2
-                                                            ,be.f + 0.5*sum((log.curr.f - log.measure.f)^2)
+                                                            ,be.f + 0.5*sum((log.curr.obs_f - log.measure.f)^2)
                                                             ,log = TRUE)
                                                          )
 
@@ -1685,14 +1692,14 @@ ReCAP_sampler =
                         } #.. if reject, leave current and posterior
                 } # close else after checking for ar=na, nan, zero
 
-            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"fert.rate.var"] = curr.sigmasq.f
+            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"Fec.var"] = curr.sigmasq.f
         }
             ##...... Survival Proportion ......##
 
             prop.sigmasq.s =
-                rinvGamma(1, al.s + length(measure.s)/2-sum(is.na(measure.s))/2,
+                rinvGamma(proj.periods, al.s + length(measure.s)/2-sum(is.na(measure.s))/2,
                                     be.s +
-                                        0.5*sum((logit.curr.s - logit.measure.s)^2,na.rm = T))
+                                        0.5*sum((logit.curr.obs_s - logit.measure.s)^2,na.rm = T))
         # - Calculate log posterior of proposed vital under projection
         log.prop.posterior =
                 log.post(f = log.curr.f
@@ -1701,12 +1708,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -1715,19 +1722,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = prop.sigmasq.s #<- use proposal
                                              ,sigmasq.SRB = curr.sigmasq.SRB
-                                             
+
 
 
 
@@ -1741,12 +1748,12 @@ ReCAP_sampler =
                                                                 ,n.hat = curr.aeri#<- use current
                                                                 ) +
                                                         log.lhood_vital(f = log.curr.obs_f
-                                                                        ,s = log.curr.obs_s
+                                                                        ,s = logit.curr.obs_s
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = prop.sigmasq.s #<- use proposal
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -1760,11 +1767,11 @@ ReCAP_sampler =
                                                          ,log.curr.post = log.curr.posterior
                                                          ,log.prop.var = dinvGamma(prop.sigmasq.s
                                                             ,al.s + length(measure.s)/2
-                                                            ,be.s + 0.5*sum((logit.curr.s - logit.measure.s)^2)
+                                                            ,be.s + 0.5*sum((logit.curr.obs_s - logit.measure.s)^2)
                                                             ,log = TRUE)
                                                          ,log.curr.var = dinvGamma(curr.sigmasq.s
                                                             ,al.s + length(measure.s)/2
-                                                            ,be.s + 0.5*sum((logit.curr.s - logit.measure.s)^2)
+                                                            ,be.s + 0.5*sum((logit.curr.obs_s - logit.measure.s)^2)
                                                             ,log = TRUE)
                                                          )
 
@@ -1784,12 +1791,12 @@ ReCAP_sampler =
                         } #.. if reject, leave current and posterior
                 } # close else after checking for ar=na, nan, zero
 
-            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"surv.prop.var"] = curr.sigmasq.s
+            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"Surv.var"] = curr.sigmasq.s
 
 
             ##...... Sex Ratio at Birth ......##
             prop.sigmasq.SRB =
-                rinvGamma(1, al.SRB + length(measure.SRB)/2-sum(is.na(measure.SRB))/2,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2,na.rm = T))
+                rinvGamma(proj.periods, al.SRB + length(measure.SRB)/2-sum(is.na(measure.SRB))/2,be.SRB + 0.5*sum((logit.curr.obs_SRB - logit.measure.SRB)^2,na.rm = T))
 
                 # - Calculate log posterior of proposed vital under projection
         log.prop.posterior =
@@ -1799,12 +1806,12 @@ ReCAP_sampler =
                                              ,A = logit.curr.A
                                              ,H = logit.curr.H
                                              ,aK0 = curr.aK0
-                                             
+
                                              ,estFec=estFec, estaK0=estaK0
-                         
+
                                              ,prior.mean.f = log.prior.mean.f
-                                             ,prior.mean.s = log.prior.mean.s
-                                             ,prior.mean.SRB = log.prior.mean.SRB
+                                             ,prior.mean.s = logit.prior.mean.s
+                                             ,prior.mean.SRB = logit.prior.mean.SRB
                                              ,prior.mean.A = logit.prior.mean.A
                                              ,prior.mean.H = logit.prior.mean.H
 
@@ -1813,19 +1820,19 @@ ReCAP_sampler =
                                              ,prior.var.SRB = prior.var.SRB
                                              ,prior.var.A = prior.var.A
                                              ,prior.var.H = prior.var.H
-                                             
+
                                              ,alpha.f = al.f, beta.f = be.f
                                              ,alpha.s = al.s, beta.s = be.s
                                              ,alpha.SRB = al.SRB, beta.SRB = be.SRB
-                                             ,alpha.A = al.A, beta.A = be.A
-                                             ,alpha.H = al.H, beta.H = be.H
+
+
                                              ,min.aK0 = min.aK0, max.aK0 = max.aK0
 
 
                                              ,sigmasq.f = curr.sigmasq.f
                                              ,sigmasq.s = curr.sigmasq.s
                                              ,sigmasq.SRB = prop.sigmasq.SRB #<- use proposal
-                                             
+
 
 
 
@@ -1839,12 +1846,12 @@ ReCAP_sampler =
                                                                 ,n.hat = curr.aeri
                                                                 ) +
                                                         log.lhood_vital(f = log.curr.obs_f
-                                                                        ,s = log.curr.obs_s
+                                                                        ,s = logit.curr.obs_s
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = prop.sigmasq.SRB #<- use proposal
@@ -1862,11 +1869,11 @@ ReCAP_sampler =
                                                          ,log.curr.post = log.curr.posterior
                                                          ,log.prop.var = dinvGamma(prop.sigmasq.SRB
                                                             ,al.SRB + length(measure.SRB)/2
-                                                            ,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2)
+                                                            ,be.SRB + 0.5*sum((logit.curr.obs_SRB - logit.measure.SRB)^2)
                                                             ,log = TRUE)
                                                          ,log.curr.var = dinvGamma(curr.sigmasq.SRB
                                                             ,al.SRB + length(measure.SRB)/2
-                                                            ,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2)
+                                                            ,be.SRB + 0.5*sum((logit.curr.obs_SRB - logit.measure.SRB)^2)
                                                             ,log = TRUE)
                                                          )
 
@@ -1894,10 +1901,10 @@ ReCAP_sampler =
 
                 full.proj = (ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
-                full.aeri = getAerialCount( full.proj,A = invlogit(logit.curr.A.full))
-                
-                log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-                logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+                full.aeri = getAerialCount( full.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount)
+
+                log.full.obs_f = log(getobsVitals(full.proj$Fec_obs,full.proj$Living[1:nage[1],],Observations$Fec))
+                logit.full.obs_s = logitf(getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
 
                 #full.living = (1-invlogit(logit.curr.H.full))*full.proj/(invlogit(logit.curr.H.full))
@@ -1920,8 +1927,8 @@ ReCAP_sampler =
                                                                         ,SRB = logit.curr.SRB
                                                                         ,estFec = estFec
                                                                         ,measure.f = log.measure.f
-                                                                        ,measure.s = log.measure.s
-                                                                        ,measure.SRB = log.measure.SRB
+                                                                        ,measure.s = logit.measure.s
+                                                                        ,measure.SRB = logit.measure.SRB
                                                                         ,sigmasq.f = curr.sigmasq.f
                                                                         ,sigmasq.s = curr.sigmasq.s
                                                                         ,sigmasq.SRB = curr.sigmasq.SRB
@@ -1964,7 +1971,7 @@ ReCAP_sampler =
         mcmc.objs$fecundity.mcmc = fert.rate.mcmc
         mean.vital$fecundity.mcmc = apply( as.matrix( fert.rate.mcmc),2,point.est)
     }
-    else{mean.vital$fecundity.mcmc = start.f}
+    #else{mean.vital$fecundity.mcmc = start.f}
 
     pD_Gelman04 = 2 * var(log.like.mcmc)
     DIC_Gelman04 = -2* mean(log.like.mcmc) + (pD_Gelman04)
@@ -1980,10 +1987,10 @@ ReCAP_sampler =
     mean_abs_dif_ae = mean(abs_dif_aerial,na.rm = T)
     se_abs_dif_ae = sd(abs_dif_aerial,na.rm = T)/sqrt(proj.periods)
 
-    #obs_f = (getobsVitals(full.proj$Fec_obs,curr.proj$living,Observations$Fec))
-    #obs_s = (getobsVitals(full.proj$Surv_obs,curr.proj$living,Observations$Surv))
+    #obs_f = (getobsVitals(full.proj$Fec_obs,full.proj$Living,Observations$Fec))
+    #obs_s = (getobsVitals(full.proj$Surv_obs,full.proj$Living,Observations$Surv))
 
-                                         
+
     ## sd
     sd_counts = lapply(list(harvest = lx.mcmc,aerial.count = ae.mcmc)
                        ,function(kk){
@@ -2006,19 +2013,16 @@ ReCAP_sampler =
 
         #cat("inital values", "\n\n")
         #.. initial values
-        start.vals = list(fecundity= start.f
-                          ,survrvival = start.s
-                          ,SRB = start.SRB
-                          ,H = start.H
-                          ,Aerial.detection = start.A
+        start.vals = list(fecundity= start.f.beta
+                          ,survrvival = start.s.beta
+                          ,SRB = start.SRB.beta
+                          ,H = start.H.beta
+                          ,Aerial.detection = start.A.beta
                           ,K0 = start.aK0
                           ,baseline.count = start.b
                           ,start.sigmasq.f = start.sigmasq.f
                           ,start.sigmasq.s = start.sigmasq.s
                           ,start.sigmasq.SRB = start.sigmasq.SRB
-                          ,start.sigmasq.A = start.sigmasq.A
-                          ,start.sigmasq.H = start.sigmasq.H
-                         #,start.sigmasq.aK0 = start.sigmasq.aK0
 
                           ,Harv.data = Harv.data
                           ,Aerial.data = Aerial.data)
@@ -2030,23 +2034,20 @@ ReCAP_sampler =
                            ,beta.survival = be.s
                            ,alpha.SRB = al.SRB
                            ,beta.SRB = be.SRB
-                           ,alpha.aerial.det = al.A
-                           ,beta.aerial.det = be.A
-                           ,alpha.Harvest = al.H
-                           ,beta.Hervest = be.H
-                           ,alpha.1overK = min.aK0
-                           ,beta.1overK = max.aK0
 
-                           ,measure.fert.rate = measure.f
-                           ,measure.surv.prop = measure.s
-                           ,measure.sRB = measure.sRB
+                           ,measured.fert.rate = measure.f
+                           ,measured.surv.prop = measure.s
+                           ,measured.SRB = measure.SRB
                            ,prior.mean.Aerial.detection = prior.mean.A
                            ,prior.mean.Harvest.proportion = prior.mean.H
 
                            #,measure.baseline.count = measure.b
-                           ,prior.mean.Harv.data = Harv.data
+                           ,Harv.data = Harv.data
                            ,Aerial.data = Aerial.data
                            ,Assumptions = Assumptions
+                           ,Observations = Observations
+                           ,Designs = Designs
+
                            ,point.est = point.est)
 
 

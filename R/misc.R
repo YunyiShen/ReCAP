@@ -2,11 +2,11 @@
 Check_assumptions = function(Assumptions, nage, proj.period){
 	if(is.null(Assumptions$Fec)) Assumptions$Fec = list(time = eyes(proj.period),age = as.matrix(eyes(nage[1])))
 	if(is.null(Assumptions$Surv)) Assumptions$Surv = list(time = eyes(proj.period),age = as.matrix(eyes(sum(nage))))
-	if(is.null(Assumptions$SRB)) Assumptions$SRB = list(time = eyes(proj.period),age = eyes(1))
-	if(is.null(Assumptions$AerialDet)) Assumptions$AerialDet  = list(time = eyes(proj.period+1),age = eyes(1))
+	if(is.null(Assumptions$SRB)) Assumptions$SRB = list(time = eyes(proj.period),age = matrix(1,nage[1],1))
+	if(is.null(Assumptions$AerialDet)) Assumptions$AerialDet  = list(time = eyes(proj.period+1),age = matrix(1,sum(nage),1))
 	if(is.null(Assumptions$Harv)) Assumptions$Harv = list(time = eyes(proj.period+1),age = eyes(sum(nage)))
 	if(is.null(Assumptions$aK0)) Assumptions$aK0 = list(eyes(nage[1]),eyes(sum(nage)),eyes(1))
-
+	if(is.null(Assumptions$Var)) Assumptions$Var = list(time = matrix(1,proj.period,1)) # assume no age structure
 	return(Assumptions)
 
 }
@@ -19,13 +19,14 @@ Check_prior_measurement_err = function(obj){
 	if(is.null(obj$Alpah$SRB)) obj$Alpah$SRB = 1
 	if(is.null(obj$Beta$SRB)) obj$Beta$SRB = .05
 	return(obj)
-	
+
 }
 
-Check_start_measurement_err = function(obj){
-	if(is.null(obj$Fec)) obj$Fec = .05
-	if(is.null(obj$Surv)) obj$Surv = .05
-	if(is.null(obj$SRB)) obj$SRB = .05
+Check_start_measurement_err = function(obj,Ass_var){
+	n = ncol(Ass_var)
+	if(is.null(obj$Fec)) obj$Fec = rep(.05,n)
+	if(is.null(obj$Surv)) obj$Surv = rep(.05,n)
+	if(is.null(obj$SRB)) obj$SRB = rep(.05,n)
 
 	return(obj)
 }
@@ -40,13 +41,14 @@ Check_observations = function(Observations, nage){
 }
 
 Check_Designs = function(Designs,nage,proj.period){
-	        
-     if(is.null(Observations$Fec))  Designs$Fec = eyes(proj.periods)
-     if(is.null(Observations$Surv))  Designs$Surv = eyes(proj.periods)
-     if(is.null(Observations$SRB))  Designs$SRB = eyes(proj.periods)
-     if(is.null(Observations$Harv))  Designs$Harv = eyes(proj.periods + 1)
-     if(is.null(Observations$AerialDet))  Design$AerialDet = eyes(proj.periods + 1)
-         	
+
+     if(is.null(Designs$Fec))  Designs$Fec = eyes(proj.period)
+     if(is.null(Designs$Surv))  Designs$Surv = eyes(proj.period)
+     if(is.null(Designs$SRB))  Designs$SRB = eyes(proj.period)
+     if(is.null(Designs$Harv))  Designs$Harv = eyes(proj.period + 1)
+     if(is.null(Designs$AerialDet))  Designs$AerialDet = eyes(proj.period + 1)
+     return(Designs)
+
 }
 
 Check_prop_var = function(prop.var,nage,proj.period){
@@ -67,25 +69,23 @@ random_beta = function(Design, Assumption, nage,period_used){
 	npara = ncol(Design)
 	assu_time = Assumption$time
 	assu_age = Assumption$age
-	
+
 	if(nrow(assu_age)!=nage){
-		cat("    Age assumption matrix must have row number same to number of age classes considered\n")
-		errs = errs + 1
+		stop("    Age assumption matrix must have row number same to number of age classes considered\n")
 	}
 
 	if(ncol(assu_time) != period_used){
-		cat("    Time assumption matrix must have column number same to number of periods considered\n")
-		errs = errs + 1
+		stop("    Time assumption matrix must have column number same to number of periods considered\n")
 	}
 
 
-	
+
 	if(nrow(Design)!= nrow(assu_time)) {
 		stop("    Incompatable age assumption matrix with design matrix, if you did not specify the assumption matrix, check the Design matrix\n")
 	}
-	
-	
-	
+
+
+
 	return(matrix( runif(ncol( assu_age ) * npara,-1,1),ncol = ncol( assu_age )))
 
 }
@@ -187,21 +187,24 @@ log.lhood_popu =function(n.census, n.hat){
 log.lhood_vital = function(f, s, SRB,estFec,measure.f, measure.s, measure.SRB
 						   ,sigmasq.f, sigmasq.s, sigmasq.SRB
 						   ){
+	nperiod = ncol(f)
 	if(estFec)
-	log.f.lhood = dnorm(as.vector(measure.f)
-                        , mean = as.vector(f)
-                        , sd = sqrt(sigmasq.f)
-                        , log = TRUE)
-	else log.f.lhood = 0
-	log.s.lhood = dnorm(as.vector(measure.s)
-                        , mean = as.vector(s)
-                        , sd = sqrt(sigmasq.s)
-                        , log = TRUE)
+		
+	log.f.lhood = sapply(1:nperiod,function(i,v,mv,sigsq){
+		sum(dnorm(mv[,i],v[,i],sqrt(sigsq[i]),log=T),na.rm=T)
+	},v=f,mv=measure.f,sigsq = sigmasq.f)	
+		
 
-	log.SRB.lhood = dnorm(as.vector(measure.SRB)
-                        , mean = as.vector(SRB)
-                        , sd = sqrt(sigmasq.SRB)
-                        , log = TRUE)
+	else log.f.lhood = 0
+
+	log.s.lhood = sapply(1:nperiod,function(i,v,mv,sigsq){
+		sum(dnorm(mv[,i],v[,i],sqrt(sigsq[i]),log=T),na.rm=T)
+	},v=s,mv=measure.s,sigsq = sigmasq.s)
+	
+	log.SRB.lhood = sapply(1:nperiod,function(i,v,mv,sigsq){
+		sum(dnorm(mv[,i],v[,i],sqrt(sigsq[i]),log=T),na.rm=T)
+	},v=SRB,mv=measure.SRB,sigsq = sigmasq.SRB)
+
 
 	return(sum(log.f.lhood,log.SRB.lhood,log.s.lhood,na.rm = T)) # need to deal with no measurement case
 }
@@ -221,7 +224,7 @@ log.post = function(## estimated vitals
 					, prior.var.A, prior.var.H
 					, min.aK0, max.aK0
                     ## fixed prior parameters on variance distns
-                    , alpha.f, beta.f, alpha.s, beta.s, alpha.SRB, beta.SRB # prior for measurement error  
+                    , alpha.f, beta.f, alpha.s, beta.s, alpha.SRB, beta.SRB # prior for measurement error
 					, sigmasq.f, sigmasq.s, sigmasq.SRB # measurement errors
                     ## value of the log likelihood
                     , log.like
@@ -250,7 +253,7 @@ log.post = function(## estimated vitals
             log.aK0.prior = 0
             log.sigmasq.aK0.prior = 0
         }
-		
+
 		if(estFec){
 			log.f.prior = dnorm(f, mean = prior.mean.f, sd = sqrt(prior.var.f)
                             ,log = TRUE)

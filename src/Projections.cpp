@@ -6,8 +6,8 @@ using namespace Rcpp;
 
 ///get Leslie matrix from survival etc.
 // [[Rcpp::export]]
-arma::mat getLeslie(const arma::mat& Surv, 
-					const arma::mat& Fec, 
+arma::mat getLeslie(const arma::mat& Surv,
+					const arma::mat& Fec,
 					const double& SRB){
 	int nage_female = Fec.n_elem;
 	int nage_male = Surv.n_elem - nage_female;
@@ -23,10 +23,10 @@ arma::mat getLeslie(const arma::mat& Surv,
 }
 
 ///Calculate the density dependency
-arma::mat DD(const bool& global, 
+arma::mat DD(const bool& global,
 			 const arma::mat& Xn,
-			 const arma::mat & aK0, 
-			 const arma::mat& midP, 
+			 const arma::mat & aK0,
+			 const arma::mat& midP,
 			 const bool& null){
   //E0 = E0/sum(E0);// This was done in main projector
   arma::mat D;
@@ -43,10 +43,10 @@ arma::mat DD(const bool& global,
 
 
 Rcpp::List ProjectLiving_helper2Cpp(const arma::mat& Living_n1,
-									const arma::mat& Surv, 
+									const arma::mat& Surv,
 									const arma::mat& Fec,
 									const double& SRB,
-									const bool& global, 
+									const bool& global,
 									const List& aK0,
 									const bool & null){
 	arma::mat D_bir = DD(global, Living_n1, aK0[0], aK0[2] ,null);
@@ -67,13 +67,13 @@ Rcpp::List ProjectLiving_helper2Cpp(const arma::mat& Living_n1,
 //[[Rcpp::export]]
 Rcpp::List ProjectAllCpp(const arma::mat& Surv,
 						 const arma::mat& Harvpar,
-						 const arma::mat& Fec, 
-						 const arma::mat& SRB, 
-						 const List& aK0, 
-						 const bool& global, 
-						 const bool& null, 
+						 const arma::mat& Fec,
+						 const arma::mat& SRB,
+						 const List& aK0,
+						 const bool& global,
+						 const bool& null,
 						 const arma::mat& bl ,
-						 const int& period, 
+						 const int& period,
 						 const IntegerVector& nage){
 	arma::mat Harvest(sum(nage),period+1); // deal with the case that there is no harvest for a certain year
 	arma::mat Living(sum(nage),period+1);
@@ -104,35 +104,40 @@ Rcpp::List ProjectAllCpp(const arma::mat& Surv,
 
 ///get Aerial count
 //[[Rcpp::export]]
-arma::mat getAerialCountPost(const List& Proj, 
+arma::mat getAerialCountPost(const List& Proj,
 							 const arma::mat& obsMat,
 							 const arma::mat& A){
   arma::mat living = Proj["Living"];
-  return(((obsMat.t() * living))%A);
+  return(((obsMat.t() * (living%A))));
 }
 ///get Aerial count
 //[[Rcpp::export]]
-arma::mat getAerialCountPre(const List& Proj, 
-							const arma::mat& obsMat, 
+arma::mat getAerialCountPre(const List& Proj,
+							const arma::mat& obsMat,
 							const arma::mat& A){
     arma::mat living = Proj["Living"];
     arma::mat harv = Proj["Harvest"];
-    return((obsMat.t() * (living+harv))%A);//
+    return((obsMat.t() * ((living+harv)%A)));//
 }
 
-
-arma::mat getobsVitals(const arma::mat& vital, 
+//[[Rcpp::export]]
+arma::mat getobsVitals(const arma::mat& vital,
 					   const arma::mat& living,
 					   const arma::mat& obsMat){
 	arma::mat previous_living = living.cols(0,living.n_cols-2);
-	return(obsMat.t() * (vital % living)/obsMat.t() * living); // matrix form for weighted average of vital rate,
+    arma::mat res(obsMat.n_cols,living.n_cols-1);
+    for(int i = 0 ; i<living.n_cols-1;++i){
+        res.col(i) = (obsMat.t() * (vital.col(i) % previous_living.col(i)))/
+            (obsMat.t() * previous_living.col(i));
+    }
+	return(res); // matrix form for weighted average of vital rate,
 // classMat has row as age classes, col as classes, e.g. 5 age and 3 classes, first two are two classes and last 3 are one, classMat will be
 	//[1,0,0;0,1,0;0,0,1;0,0,1;0,0,1]
 }
 
 ///get observed lambda (growth rate from harvest)
 
-arma::mat get_obs_LambdasH(const arma::mat& Harv, 
+arma::mat get_obs_LambdasH(const arma::mat& Harv,
 						   const arma::mat& H){
   arma::mat Living_total = sum((1/H-1) % Harv);//living individual at all year
   return((Living_total.cols(0,Harv.n_cols-2))/(Living_total.cols(1,Harv.n_cols-1))); // Lambdas

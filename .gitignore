@@ -6,4 +6,6 @@ src/*.o
 src/*.so
 src/*.dll
 _data_/*
+_fig_code_/*
+figs/*
 test.R

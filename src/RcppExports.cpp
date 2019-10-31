@@ -20,7 +20,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // ProjectAllCpp
-List ProjectAllCpp(const arma::mat& Surv, const arma::mat& Harvpar, const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl, const int& period, const IntegerVector& nage);
+Rcpp::List ProjectAllCpp(const arma::mat& Surv, const arma::mat& Harvpar, const arma::mat& Fec, const arma::mat& SRB, const List& aK0, const bool& global, const bool& null, const arma::mat& bl, const int& period, const IntegerVector& nage);
 RcppExport SEXP _ReCAP_ProjectAllCpp(SEXP SurvSEXP, SEXP HarvparSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP aK0SEXP, SEXP globalSEXP, SEXP nullSEXP, SEXP blSEXP, SEXP periodSEXP, SEXP nageSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -40,26 +40,41 @@ BEGIN_RCPP
 END_RCPP
 }
 // getAerialCountPost
-arma::mat getAerialCountPost(const List& Proj, const arma::mat& A);
-RcppExport SEXP _ReCAP_getAerialCountPost(SEXP ProjSEXP, SEXP ASEXP) {
+arma::mat getAerialCountPost(const List& Proj, const arma::mat& obsMat, const arma::mat& A);
+RcppExport SEXP _ReCAP_getAerialCountPost(SEXP ProjSEXP, SEXP obsMatSEXP, SEXP ASEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const List& >::type Proj(ProjSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type obsMat(obsMatSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
-    rcpp_result_gen = Rcpp::wrap(getAerialCountPost(Proj, A));
+    rcpp_result_gen = Rcpp::wrap(getAerialCountPost(Proj, obsMat, A));
     return rcpp_result_gen;
 END_RCPP
 }
 // getAerialCountPre
-arma::mat getAerialCountPre(const List& Proj, const arma::mat& A);
-RcppExport SEXP _ReCAP_getAerialCountPre(SEXP ProjSEXP, SEXP ASEXP) {
+arma::mat getAerialCountPre(const List& Proj, const arma::mat& obsMat, const arma::mat& A);
+RcppExport SEXP _ReCAP_getAerialCountPre(SEXP ProjSEXP, SEXP obsMatSEXP, SEXP ASEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const List& >::type Proj(ProjSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type obsMat(obsMatSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
-    rcpp_result_gen = Rcpp::wrap(getAerialCountPre(Proj, A));
+    rcpp_result_gen = Rcpp::wrap(getAerialCountPre(Proj, obsMat, A));
+    return rcpp_result_gen;
+END_RCPP
+}
+// getobsVitals
+arma::mat getobsVitals(const arma::mat& vital, const arma::mat& living, const arma::mat& obsMat);
+RcppExport SEXP _ReCAP_getobsVitals(SEXP vitalSEXP, SEXP livingSEXP, SEXP obsMatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type vital(vitalSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type living(livingSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type obsMat(obsMatSEXP);
+    rcpp_result_gen = Rcpp::wrap(getobsVitals(vital, living, obsMat));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -122,8 +137,9 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_ReCAP_getLeslie", (DL_FUNC) &_ReCAP_getLeslie, 3},
     {"_ReCAP_ProjectAllCpp", (DL_FUNC) &_ReCAP_ProjectAllCpp, 10},
-    {"_ReCAP_getAerialCountPost", (DL_FUNC) &_ReCAP_getAerialCountPost, 2},
-    {"_ReCAP_getAerialCountPre", (DL_FUNC) &_ReCAP_getAerialCountPre, 2},
+    {"_ReCAP_getAerialCountPost", (DL_FUNC) &_ReCAP_getAerialCountPost, 3},
+    {"_ReCAP_getAerialCountPre", (DL_FUNC) &_ReCAP_getAerialCountPre, 3},
+    {"_ReCAP_getobsVitals", (DL_FUNC) &_ReCAP_getobsVitals, 3},
     {"_ReCAP_get_obs_LambdasA", (DL_FUNC) &_ReCAP_get_obs_LambdasA, 1},
     {"_ReCAP_get_hypo_Lambdas_helper", (DL_FUNC) &_ReCAP_get_hypo_Lambdas_helper, 7},
     {"_ReCAP_get_hypo_Lambdas", (DL_FUNC) &_ReCAP_get_hypo_Lambdas, 6},

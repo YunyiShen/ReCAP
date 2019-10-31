@@ -9,12 +9,16 @@ ProjectAllCpp <- function(Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period
     .Call(`_ReCAP_ProjectAllCpp`, Surv, Harvpar, Fec, SRB, aK0, global, null, bl, period, nage)
 }
 
-getAerialCountPost <- function(Proj, A) {
-    .Call(`_ReCAP_getAerialCountPost`, Proj, A)
+getAerialCountPost <- function(Proj, obsMat, A) {
+    .Call(`_ReCAP_getAerialCountPost`, Proj, obsMat, A)
 }
 
-getAerialCountPre <- function(Proj, A) {
-    .Call(`_ReCAP_getAerialCountPre`, Proj, A)
+getAerialCountPre <- function(Proj, obsMat, A) {
+    .Call(`_ReCAP_getAerialCountPre`, Proj, obsMat, A)
+}
+
+getobsVitals <- function(vital, living, obsMat) {
+    .Call(`_ReCAP_getobsVitals`, vital, living, obsMat)
 }
 
 get_obs_LambdasA <- function(Living_total) {
