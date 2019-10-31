@@ -4,8 +4,8 @@
 
 
 #####Things to do:#####
-#Since we added variance assumption matrix, 
-#  1. MCMC object for variance need to be changed
+#Since we added variance assumption matrix,
+#  1. MCMC object for variance need to be changed: DONE
 #  2. need to add sigma.sq_full for all three measured vital rates
 #  3. change the updating variance chunk, use assumption matrix
 #######10/31/19########
@@ -29,7 +29,7 @@ ReCAP_sampler =
                          , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),0)
                          , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),500)
 
-                         , Assumptions = list() # Assumption matrices list with entries called Fec Surv SRB Harv and AerialDet, each entry is a list with name age and time, inside which is a matrix
+                         , Assumptions = list() # Assumption matrices list with entries called Fec Surv SRB Harv and AerialDet as well as err for measure error, each entry is a list with name age and time, inside which is a matrix
                          , Designs = list() # Design matrices rows as years, or time ingeneral, cols as covariate, then beta will have rows as covariate and cols as age classes, dependends on assumptions
                          , Observations = list() # observation age classes, row as raw most detailed age, columns as age classes (e.g. fawn, yearling, adults)
 
@@ -131,7 +131,7 @@ ReCAP_sampler =
         prop.vars = Check_prop_var(prop.vars,nage,proj.periods)
         Designs = Check_Designs(Designs,nage,proj.periods)
 	prior.measurement.err = Check_prior_measurement_err(prior.measurement.err)
-        start.measurement.err = Check_start_measurement_err(start.measurement.err,Assumptions$Var$time)
+        start.measurement.err = Check_start_measurement_err(start.measurement.err,Assumptions$err$time)
 
         Observations = Check_observations(Observations, nage)
         errs_dim = 0
@@ -304,13 +304,17 @@ ReCAP_sampler =
             colnames(baseline.count.mcmc) = NULL
 
             # variances
-            variances.mcmc =
-                    mcmc(matrix(nrow = n.stored, ncol = 3)
+            err.mcmc =
+                    mcmc(matrix(nrow = n.stored,
+                                ncol = sum(length(start.sigmasq.f),length(start.sigmasq.s),length(start.sigmasq.SRB)))
                              ,start = burn.in + 1
                              ,thin = thin.by)
-            colnames(variances.mcmc) =
-                    c("Fec.var", "Surv.var", "SRB.var")
+            colnames(err.mcmc) =
+                    NULL
 
+            f.err.cols = 1:length(start.sigmasq.f)
+            s.err.cols = 1:length(start.sigmasq.s) + length(start.sigmasq.f)
+            SRB.err.cols = 1:length(start.sigmasq.SRB) + length(start.sigmasq.s) + length(start.sigmasq.f)
         #.. Record acceptance rate
 
         acc.count =
@@ -450,6 +454,7 @@ ReCAP_sampler =
         A_assump = Assumptions$AerialDet
         Harv_assump = Assumptions$Harv
         aK0_assump = Assumptions$aK0
+        err_assump = Assumptions$err
 
         #.. Set current projection: base on initial values # homo or not is important, determin it use homo = T
 
@@ -459,6 +464,9 @@ ReCAP_sampler =
         logit.curr.H.full = Harv_assump$age %*% logit.curr.H %*%Harv_assump$time
         logit.curr.SRB.full = SRB_assump$age %*% logit.curr.SRB %*%SRB_assump$time
         logit.curr.A.full = A_assump$age %*% logit.curr.A %*%A_assump$time
+        curr.sigmasq.f.full = curr.sigmasq.f %*% err_assump$time
+        curr.sigmasq.s.full = curr.sigmasq.s %*% err_assump$time
+        curr.sigmasq.SRB.full = curr.sigmasq.SRB %*% err_assump$time
         curr.aK0.full = lapply(1:length(aK0_assump),function(i,aK0,assump){
             assump[[i]] %*% aK0[[i]]
         },aK0 = curr.aK0,assump = aK0_assump)
@@ -527,9 +535,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -647,9 +655,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -805,9 +813,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -965,9 +973,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -1113,9 +1121,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -1252,9 +1260,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -1384,9 +1392,9 @@ ReCAP_sampler =
 									,measure.f = log.measure.f
 									,measure.s = logit.measure.s
 									,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -1538,9 +1546,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -1590,12 +1598,13 @@ ReCAP_sampler =
             logit.curr.obs_s = logitf(getobsVitals(curr.proj$Surv_obs,curr.proj$Living,Observations$Surv))
 
 
-            if(verb && identical(i%%1000, 0)) cat("\n", i, " Variances")
+            #if(verb && identical(i%%1000, 0)) cat("\n", i, " Variances")
 
             ##...... Fertility rate ......##
             if(estFec){ # if not est Fer, this is not needed
-                prop.sigmasq.f = rinvGamma(proj.periods, al.f + length(measure.f)/2-sum(is.na(measure.f))/2,be.f + 0.5*sum((log.curr.obs_f -log.measure.f)^2,na.rm = T))
-
+                prop.sigmasq.f = rinvGamma(length(start.sigmasq.f), al.f + length(measure.f)/2-sum(is.na(measure.f))/2,be.f + 0.5*sum((log.curr.obs_f -log.measure.f)^2,na.rm = T))
+                prop.sigmasq.f = matrix(prop.sigmasq.f,nrow(start.sigmasq.f),ncol(start.sigmasq.f))
+                prop.sigmasq.f.full = prop.sigmasq.f %*% Assumptions$err$time
                 # - Calculate log posterior of proposed vital under projection
         log.prop.posterior =
                 log.post(f = log.curr.f
@@ -1650,9 +1659,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = prop.sigmasq.f #<- use proposal
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = prop.sigmasq.f.full #<- use proposal
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -1688,18 +1697,21 @@ ReCAP_sampler =
                                 if(i > burn.in) acc.count$sigmasq.f =
                                         acc.count$sigmasq.f + 1/n.iter
                                 curr.sigmasq.f = prop.sigmasq.f
+                                curr.sigmasq.f.full = prop.sigmasq.f.full
                                 log.curr.posterior = log.prop.posterior
                         } #.. if reject, leave current and posterior
                 } # close else after checking for ar=na, nan, zero
 
-            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"Fec.var"] = curr.sigmasq.f
+            if(k %% 1 == 0 && k > 0) err.mcmc[k,f.err.cols] = as.vector( curr.sigmasq.f )
         }
             ##...... Survival Proportion ......##
 
             prop.sigmasq.s =
-                rinvGamma(proj.periods, al.s + length(measure.s)/2-sum(is.na(measure.s))/2,
-                                    be.s +
-                                        0.5*sum((logit.curr.obs_s - logit.measure.s)^2,na.rm = T))
+                rinvGamma(length(start.sigmasq.s), al.s + length(measure.s)/2-sum(is.na(measure.s))/2,
+                                    be.s +0.5*sum((logit.curr.obs_s - logit.measure.s)^2,na.rm = T))
+
+            prop.sigmasq.s = matrix(prop.sigmasq.s,nrow(start.sigmasq.s),ncol(start.sigmasq.s))
+            prop.sigmasq.s.full = prop.sigmasq.s %*% Assumptions$err$time
         # - Calculate log posterior of proposed vital under projection
         log.prop.posterior =
                 log.post(f = log.curr.f
@@ -1754,9 +1766,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = prop.sigmasq.s #<- use proposal
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = prop.sigmasq.s.full #<- use proposal
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -1787,17 +1799,19 @@ ReCAP_sampler =
                                 if(i > burn.in) acc.count$sigmasq.s =
                                         acc.count$sigmasq.s + 1/n.iter
                                 curr.sigmasq.s = prop.sigmasq.s
+                                curr.sigmasq.s.full = prop.sigmasq.s.full
                                 log.curr.posterior = log.prop.posterior
                         } #.. if reject, leave current and posterior
                 } # close else after checking for ar=na, nan, zero
 
-            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"Surv.var"] = curr.sigmasq.s
+            if(k %% 1 == 0 && k > 0) err.mcmc[k,s.err.cols] = as.vector( curr.sigmasq.s )
 
 
             ##...... Sex Ratio at Birth ......##
             prop.sigmasq.SRB =
-                rinvGamma(proj.periods, al.SRB + length(measure.SRB)/2-sum(is.na(measure.SRB))/2,be.SRB + 0.5*sum((logit.curr.obs_SRB - logit.measure.SRB)^2,na.rm = T))
-
+                rinvGamma(proj.periods, al.SRB + length(measure.SRB)/2-sum(is.na(measure.SRB))/2,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2,na.rm = T))
+            prop.sigmasq.SRB = matrix(prop.sigmasq.SRB,nrow(start.sigmasq.SRB),ncol(start.sigmasq.SRB))
+            prop.sigmasq.SRB.full = prop.sigmasq.SRB %*% Assumptions$err$time
                 # - Calculate log posterior of proposed vital under projection
         log.prop.posterior =
                 log.post(f = log.curr.f
@@ -1852,9 +1866,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = prop.sigmasq.SRB #<- use proposal
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = prop.sigmasq.SRB.full #<- use proposal
                                                                         )
                                                         #　both harvest and aerial count, as well as vital rates
                                               # tell algorithm where the fert has to be 0
@@ -1869,11 +1883,11 @@ ReCAP_sampler =
                                                          ,log.curr.post = log.curr.posterior
                                                          ,log.prop.var = dinvGamma(prop.sigmasq.SRB
                                                             ,al.SRB + length(measure.SRB)/2
-                                                            ,be.SRB + 0.5*sum((logit.curr.obs_SRB - logit.measure.SRB)^2)
+                                                            ,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2)
                                                             ,log = TRUE)
                                                          ,log.curr.var = dinvGamma(curr.sigmasq.SRB
                                                             ,al.SRB + length(measure.SRB)/2
-                                                            ,be.SRB + 0.5*sum((logit.curr.obs_SRB - logit.measure.SRB)^2)
+                                                            ,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2)
                                                             ,log = TRUE)
                                                          )
 
@@ -1889,11 +1903,12 @@ ReCAP_sampler =
                                 if(i > burn.in) acc.count$sigmasq.SRB =
                                         acc.count$sigmasq.s + 1/n.iter
                                 curr.sigmasq.SRB = prop.sigmasq.SRB
+                                curr.sigmasq.SRB.full = prop.sigmasq.SRB.full
                                 log.curr.posterior = log.prop.posterior
                         } #.. if reject, leave current and posterior
                 } # close else after checking for ar=na, nan, zero
 
-            if(k %% 1 == 0 && k > 0) variances.mcmc[k,"SRB.var"] = curr.sigmasq.SRB
+            if(k %% 1 == 0 && k > 0) err.mcmc[k,SRB.err.cols] = as.vector( curr.sigmasq.SRB )
 
 
 
@@ -1929,9 +1944,9 @@ ReCAP_sampler =
                                                                         ,measure.f = log.measure.f
                                                                         ,measure.s = logit.measure.s
                                                                         ,measure.SRB = logit.measure.SRB
-                                                                        ,sigmasq.f = curr.sigmasq.f
-                                                                        ,sigmasq.s = curr.sigmasq.s
-                                                                        ,sigmasq.SRB = curr.sigmasq.SRB
+                                                                        ,sigmasq.f = curr.sigmasq.f.full
+                                                                        ,sigmasq.s = curr.sigmasq.s.full
+                                                                        ,sigmasq.SRB = curr.sigmasq.SRB.full
                                                                         )
 
                   }
@@ -1953,7 +1968,7 @@ ReCAP_sampler =
                      ,baseline.count.mcmc = baseline.count.mcmc
                      ,harvest.mcmc = lx.mcmc
                      ,aerial.count.mcmc = ae.mcmc
-                     ,variances.mcmc = variances.mcmc)
+                     ,error.mcmc = err.mcmc)
     mean.vital = lapply(mcmc.objs,function(kk){
         apply(as.matrix(kk),2,point.est)
     })

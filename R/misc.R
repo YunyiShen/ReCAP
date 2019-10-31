@@ -6,7 +6,7 @@ Check_assumptions = function(Assumptions, nage, proj.period){
 	if(is.null(Assumptions$AerialDet)) Assumptions$AerialDet  = list(time = eyes(proj.period+1),age = matrix(1,sum(nage),1))
 	if(is.null(Assumptions$Harv)) Assumptions$Harv = list(time = eyes(proj.period+1),age = eyes(sum(nage)))
 	if(is.null(Assumptions$aK0)) Assumptions$aK0 = list(eyes(nage[1]),eyes(sum(nage)),eyes(1))
-	if(is.null(Assumptions$Var)) Assumptions$Var = list(time = matrix(1,proj.period,1)) # assume no age structure
+	if(is.null(Assumptions$err)) Assumptions$err = list(time = matrix(1,1,proj.period)) # assume no age structure
 	return(Assumptions)
 
 }
@@ -23,10 +23,10 @@ Check_prior_measurement_err = function(obj){
 }
 
 Check_start_measurement_err = function(obj,Ass_var){
-	n = ncol(Ass_var)
-	if(is.null(obj$Fec)) obj$Fec = rep(.05,n)
-	if(is.null(obj$Surv)) obj$Surv = rep(.05,n)
-	if(is.null(obj$SRB)) obj$SRB = rep(.05,n)
+	n = nrow(Ass_var)
+	if(is.null(obj$Fec)) obj$Fec = matrix(.05,1,n)
+	if(is.null(obj$Surv)) obj$Surv = matrix(.05,1,n)
+	if(is.null(obj$SRB)) obj$SRB = matrix(.05,1,n)
 
 	return(obj)
 }
@@ -202,7 +202,7 @@ log.lhood_vital = function(f, s, SRB,estFec,measure.f, measure.s, measure.SRB
 	},v=s,mv=measure.s,sigsq = sigmasq.s)
 	
 	log.SRB.lhood = sapply(1:nperiod,function(i,v,mv,sigsq){
-		sum(dnorm(mv[,i],v[,i],sqrt(sigsq[i]),log=T),na.rm=T)
+		sum(dnorm(mv[i],v[i],sqrt(sigsq[i]),log=T),na.rm=T)
 	},v=SRB,mv=measure.SRB,sigsq = sigmasq.SRB)
 
 
