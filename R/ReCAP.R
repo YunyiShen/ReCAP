@@ -4,11 +4,8 @@
 
 
 #####Things to do:#####
-#Since we added variance assumption matrix,
-#  1. MCMC object for variance need to be changed: DONE
-#  2. need to add sigma.sq_full for all three measured vital rates
-#  3. change the updating variance chunk, use assumption matrix
-#######10/31/19########
+# Check passing of full vital matrices, experiments show that we just sample out prior, which is not right
+#######11/01/19########
 
 
 
@@ -101,7 +98,7 @@ ReCAP_sampler =
            length(prior.mean.H) != length(prior.var.H)|
            length(prior.mean.A) != length(prior.var.A)
            ) stop("    Make sure prior mean and var have same lenght.\n")
-
+        cat("    all clear\n\n")
 
         if(length(prior.mean.f) != 1 & length(prior.mean.f) != nage[1]){
            prior.mean.f = prior.ageclass$Fec %*%  prior.mean.f
@@ -135,11 +132,11 @@ ReCAP_sampler =
 
         Observations = Check_observations(Observations, nage)
         errs_dim = 0
-        cat("\n  Check Harvest data:\n")
+        cat("\n  Checking Harvest data:\n")
         Check_data(Harv.data,sum(nage),proj.periods + 1 )
-        cat("\n  Check Aerial count data:\n")
+        cat("\n  Checking Aerial count data:\n")
         Check_data(Aerial.data,1,proj.periods + 1)
-        cat("All Green \n")
+        cat("\n All Green \n")
 
 
 
@@ -390,7 +387,7 @@ ReCAP_sampler =
         s.out.tol = matrix(0, nrow = nrow(start.s.beta), ncol = ncol(start.s.beta)
                                                 ,dimnames = dimnames(start.s.beta))
 
-        cat("done\n")
+        cat("done\n\n")
         ## -------- Initialize -------- ## Restart here in 10/19/2018
         cat("Initializing...")
         #.. Set current vitals and variances to inital values
@@ -547,8 +544,8 @@ ReCAP_sampler =
         #...............................#
 
 
-        cat("done\n")
-        cat("Start sampling...\n")
+        cat("done\n\n")
+        cat("Start sampling...\n\n\n")
         for(i in 1:(n.iter + burn.in)) {
             svMisc::progress(((i-1)/(n.iter + burn.in))*100,progress.bar = T)
             # k is the index into the storage objects
@@ -1951,13 +1948,13 @@ ReCAP_sampler =
 
                   }
 
-                if(verb && identical(i%%1000, 0)) cat("\n\n")
+               # if(verb && identical(i%%1000, 0)) cat("\n\n")
 
             } # Ends outer-most loop
 
         ## ......... End Loop ........ ##
         #...............................#
-    cat("\n","done","\n","model checking...")
+    cat("\n","done\n","\n","model checking...")
     # calculate DIC
     mcmc.objs = list(survival.mcmc = surv.prop.mcmc
                      ,SRB.mcmc = SRB.mcmc
@@ -2099,6 +2096,7 @@ ReCAP_sampler =
                          ,start.vals = start.vals
                          ,alg.params = alg.params)
         class(ret.list) = "ReCAP_sample"
-        cat("done \n","all done \n")
+        cat("done \n\n")
+        cat("All done \n")
         return(ret.list)
 }

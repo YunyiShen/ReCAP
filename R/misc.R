@@ -32,11 +32,11 @@ Check_start_measurement_err = function(obj,Ass_var){
 }
 
 Check_observations = function(Observations, nage){
-	if(is.null(Observations$Fec)) Assumptions$Fec = eyes(nage[1])
-	if(is.null(Observations$Surv)) Assumptions$Surv = eyes(sum(nage))
-	if(is.null(Observations$AerialCount)) Assumptions$AerialCount = matrix(1,sum(nage),1)
+	if(is.null(Observations$Fec)) Observations$Fec = eyes(nage[1])
+	if(is.null(Observations$Surv)) Observations$Surv = eyes(sum(nage))
+	if(is.null(Observations$AerialCount)) Observations$AerialCount = matrix(1,sum(nage),1)
 
-	return(Assumptions)
+	return(Observations)
 
 }
 
@@ -189,18 +189,18 @@ log.lhood_vital = function(f, s, SRB,estFec,measure.f, measure.s, measure.SRB
 						   ){
 	nperiod = ncol(f)
 	if(estFec)
-		
+
 	log.f.lhood = sapply(1:nperiod,function(i,v,mv,sigsq){
 		sum(dnorm(mv[,i],v[,i],sqrt(sigsq[i]),log=T),na.rm=T)
-	},v=f,mv=measure.f,sigsq = sigmasq.f)	
-		
+	},v=f,mv=measure.f,sigsq = sigmasq.f)
+
 
 	else log.f.lhood = 0
 
 	log.s.lhood = sapply(1:nperiod,function(i,v,mv,sigsq){
 		sum(dnorm(mv[,i],v[,i],sqrt(sigsq[i]),log=T),na.rm=T)
 	},v=s,mv=measure.s,sigsq = sigmasq.s)
-	
+
 	log.SRB.lhood = sapply(1:nperiod,function(i,v,mv,sigsq){
 		sum(dnorm(mv[i],v[i],sqrt(sigsq[i]),log=T),na.rm=T)
 	},v=SRB,mv=measure.SRB,sigsq = sigmasq.SRB)
