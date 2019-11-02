@@ -181,7 +181,7 @@ log.lhood_popu =function(n.census, n.hat){
     density = dpois(x=n.census,lambda = n.hat,log = TRUE) # Use Poisson instead in Poisson_likelihood
     ##-- joint log likelihood --##
 
-        return(sum(density))
+        return(sum(density,na.rm=T))
 } # checked 10/24/2018
 
 log.lhood_vital = function(f, s, SRB,estFec,measure.f, measure.s, measure.SRB
