@@ -12,12 +12,12 @@ Check_assumptions = function(Assumptions, nage, proj.period){
 }
 
 Check_prior_measurement_err = function(obj){
-	if(is.null(obj$Alpah$Fec)) obj$Alpah$Fec = 1
-	if(is.null(obj$Beta$Fec)) obj$Beta$Fec = .1
-	if(is.null(obj$Alpah$Surv)) obj$Alpah$Surv = 1
-	if(is.null(obj$Beta$Surv)) obj$Beta$Surv = .1
-	if(is.null(obj$Alpah$SRB)) obj$Alpah$SRB = 1
-	if(is.null(obj$Beta$SRB)) obj$Beta$SRB = .05
+	if(is.null(obj$Alpah$Fec)) obj$Alpah$Fec = 3
+	if(is.null(obj$Beta$Fec)) obj$Beta$Fec = 1
+	if(is.null(obj$Alpah$Surv)) obj$Alpah$Surv = 3
+	if(is.null(obj$Beta$Surv)) obj$Beta$Surv = 1
+	if(is.null(obj$Alpah$SRB)) obj$Alpah$SRB = 3
+	if(is.null(obj$Beta$SRB)) obj$Beta$SRB = .5
 	return(obj)
 
 }

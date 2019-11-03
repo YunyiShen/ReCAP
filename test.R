@@ -61,7 +61,7 @@ Chicago_RES = ReCAP_sampler( Harv.data = as.matrix(Harv.data)
 							, prior.mean = prior.mean
 							, prior.var = prior.var
 							, prior.ageclass = prior.ageclass
-							, n.iter = 2000, burn.in = 500,thin.by = 1
+							, n.iter = 200000, burn.in = 50000,thin.by = 50
 							, prior.measurement.err = prior.measurement.error
                             , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),100)
                             , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),1500)
