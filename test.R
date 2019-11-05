@@ -39,11 +39,11 @@ mean.A = matrix(0.7,1,period+1)
 mean.aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(10,1,1))
 prop.vars = list(Fec = matrix(1,nrow = nage[1],ncol = period),
                  Surv = matrix(1,nrow = sum(nage), ncol = period),
-                 SRB = matrix(1,nage[1],period), # vital rates has period cols
+                 SRB = matrix(0.1,nage[1],period), # vital rates has period cols
                  AerialDet = matrix(1,1,period+1),
                  Harv = matrix(1,nrow = 4,ncol = period+1),
                  aK0=list(5e-8,5e-8,50),
-                 baseline.pop.count = matrix(1,nrow = sum(nage),ncol = 1))
+                 baseline.pop.count = matrix(.1,nrow = sum(nage),ncol = 1))
 
 prior.measurement.error = list(Alpha = list(Fec = 3,Surv = 3,SRB = 3),Beta = list(Fec=1,Surv = 1,SRB=.5))
 
