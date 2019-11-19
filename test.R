@@ -20,6 +20,7 @@ Harv_assump = as.matrix(Harv_assump) # this is the assumption matrix for specifi
 Assumptions = list()
 Assumptions$Harv = list(time = eyes(period+1),age = Harv_assump) # tons of assumptions on vital rates
 
+
 prior.mean = list(Fec = c(0.5,1,2),Surv = 0.6, SRB = 0.5, Harv = 0.5, AerialDet = 0.7)
 prior.var = list(Fec = c(.2,.2,.2),Surv = 2, SRB = .1, Harv = .8, AerialDet = .8)
 
@@ -31,6 +32,7 @@ prior.ageclass = list(Fec = FYA)
 Observations = list(Fec = FYA)
 
 
+Assumptions$Fec = list(time = eyes(period),age = FYA)
 # full matrix for e.g. Harvest will be:
 #  Assumptions$Harv$age %*% as.matrix(mean.H) %*% Assumptions$Harv$time
 #  It is a good idea to try the command above to see how to use assumption matrices.
@@ -61,7 +63,7 @@ Chicago_RES = ReCAP_sampler( Harv.data = as.matrix(Harv.data)
 							, prior.mean = prior.mean
 							, prior.var = prior.var
 							, prior.ageclass = prior.ageclass
-							, n.iter = 200000, burn.in = 50000,thin.by = 50
+							, n.iter = 7500, burn.in = 5000,thin.by = 5
 							, prior.measurement.err = prior.measurement.error
                             , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),100)
                             , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),1500)
