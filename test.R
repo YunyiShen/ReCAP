@@ -19,9 +19,10 @@ Harv_assump = as.matrix(Harv_assump) # this is the assumption matrix for specifi
 
 Assumptions = list()
 Assumptions$Harv = list(time = eyes(period+1),age = Harv_assump) # tons of assumptions on vital rates
+
+
 Assumptions$err = list(time = eyes(period))
-
-
+Assumptions$Surv = list(time = eyes(period),age = Harv_assump)
 
 prior.mean = list(Fec = c(0.5,1,2),Surv = 0.6, SRB = 0.5, Harv = 0.5, AerialDet = 0.7)
 prior.var = list(Fec = c(.2,.2,.2),Surv = 2, SRB = .1, Harv = .8, AerialDet = .8)
@@ -35,6 +36,7 @@ Observations = list(Fec = FYA)
 
 
 Assumptions$Fec = list(time = eyes(period),age = FYA)
+Assumptions$err  =list(time = eyes(period))
 # full matrix for e.g. Harvest will be:
 #  Assumptions$Harv$age %*% as.matrix(mean.H) %*% Assumptions$Harv$time
 #  It is a good idea to try the command above to see how to use assumption matrices.
