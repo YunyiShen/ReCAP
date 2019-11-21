@@ -22,7 +22,7 @@ Assumptions$Harv = list(time = eyes(period+1),age = Harv_assump) # tons of assum
 
 
 Assumptions$err = list(time = eyes(period))
-Assumptions$Surv = list(time = eyes(period),age = Harv_assump)
+
 
 prior.mean = list(Fec = c(0.5,1,2),Surv = 0.6, SRB = 0.5, Harv = 0.5, AerialDet = 0.7)
 prior.var = list(Fec = c(.2,.2,.2),Surv = 2, SRB = .1, Harv = .8, AerialDet = .8)
@@ -34,9 +34,15 @@ FYA[3:8,3] = 1
 prior.ageclass = list(Fec = FYA)
 Observations = list(Fec = FYA)
 
+FYA_sex = matrix(0,11,6)
+FYA_sex[9:11,4:6] = eyes(3)
+FYA_sex[1:3,1:3] = eyes(3)
+FYA_sex[3:8,3] = 1
+
 
 Assumptions$Fec = list(time = eyes(period),age = FYA)
 Assumptions$err  =list(time = eyes(period))
+Assumptions$Surv = list(time = eyes(period),age = FYA_sex)
 # full matrix for e.g. Harvest will be:
 #  Assumptions$Harv$age %*% as.matrix(mean.H) %*% Assumptions$Harv$time
 #  It is a good idea to try the command above to see how to use assumption matrices.
