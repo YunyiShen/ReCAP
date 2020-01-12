@@ -359,6 +359,23 @@ analysisLambda = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   return(res)
 }
 
+analysisRecruitment = function(mcmc_obj,Assumptions = list(),nage,n_proj){
+  mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
+  res = lapply(1:length(mcmc_list),function(i,mcmc_list){
+    temp = mcmc_list[[i]]
+    hypo_lambdas = get_hypo_Lambdas(temp$harvest.mcmc,temp$living.mcmc,temp$H.mcmc,temp$survival.mcmc,temp$fecundity.mcmc,temp$SRB.mcmc)
+    living = matrix(temp$living.mcmc,ncol = n_proj+1)
+    living_t = matrix( colSums(living),nrow = 1)
+	hypo_recu = apply(hypo_lambdas,1,"*",living_t[1:n_proj]) - living_t[1:n_proj]
+    obs_recu = living_t[1:n_proj+1] - living_t[1:n_proj]
+    lambdas = rbind(hypo_recu,obs_recu)
+	  row.names(lambdas) = c("maximum","uniform_age","stable_age","no_harvest","minimum","observed")
+	  return(lambdas)
+  },mcmc_list)
+  class(res) = "ReCAP_recruitment"
+  return(res)
+}
+
 
 Lambda_plot = function(ReCAP_lambda_obj,start_year=1,alpha=.05){
 	mean_lambda = Reduce("+",ReCAP_lambda_obj)/(length(ReCAP_lambda_obj))
@@ -394,11 +411,15 @@ Lambda_plot = function(ReCAP_lambda_obj,start_year=1,alpha=.05){
                     ,high = higher_975[3,]
                     ,year = year)
 	plot_data = rbind(observed,even,nocull,stable)
+	
+	if(class(ReCAP_lambda_obj) == "ReCAP_lambda") label_y = "Lambda   X(t+1)/X(t)"
+	if(class(ReCAP_lambda_obj) == "ReCAP_recruitment") label_y = "Recruitment  X(t+1)/X(t)"
+	
 	ggplot2::ggplot(data = plot_data,aes(x=year,y=lambda,color=point))+
 		geom_line()+
 		geom_point() +
 		geom_errorbar(aes(ymin=low, ymax=high), width=.1) +
-		labs(y = "Lambda   X(t+1)/X(t)")
+		labs(y = label_y)
 
 }
 
