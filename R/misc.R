@@ -324,18 +324,18 @@ HarvestSen = function(Fec,Surv,SRB,Harvpar,nage,Harv_assump){
 }
 
 
-
+# this helper make mcmc object a large list, each entry has a sample
 getListmcmc_full = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   nsample = nrow(mcmc_obj[[1]])
   Assumptions = Check_assumptions(Assumptions,nage,n_proj)
   lapply(1:nsample,function(i,mcmc_obj,nage_female,nage_total,Assumptions){
     temp = lapply(mcmc_obj,function(obj,i){obj[i,]},i=i)
-    temp$survival.mcmc = Assumptions$Surv$age %*% matrix(temp$survival.mcmc,nrow = ncol(Assumptions$Surv$age),byrow = T) %*% Assumptions$Surv$time
-    temp$SRB.mcmc = Assumptions$SRB$age %*% matrix(temp$SRB.mcmc,nrow = ncol(Assumptions$SRB$age)) %*% Assumptions$SRB$time
+    temp$survival.mcmc = invlogit( Assumptions$Surv$age %*% matrix(temp$survival.mcmc,nrow = ncol(Assumptions$Surv$age),byrow = T) %*% Assumptions$Surv$time)
+    temp$SRB.mcmc = invlogit(  Assumptions$SRB$age %*% matrix(temp$SRB.mcmc,nrow = ncol(Assumptions$SRB$age)) %*% Assumptions$SRB$time)
     temp$aerial.detection.mcmc = Assumptions$AerialDet$age %*% matrix(temp$aerial.detection.mcmc,nrow = ncol(Assumptions$AerialDet$age)) %*% Assumptions$AerialDet$time
-    temp$H.mcmc = Assumptions$Harv$age %*% matrix(temp$H.mcmc,nrow = ncol(Assumptions$Harv$age)) %*% Assumptions$Harv$time
-    temp$fecundity.mcmc = Assumptions$Fec$age %*% matrix(temp$fecundity.mcmc,nrow = ncol(Assumptions$Fec$age),byrow = T) %*% Assumptions$Fec$time
-    temp$harvest.mcmc =  matrix(temp$harvest.mcmc,ncol = n_proj+1)
+    temp$H.mcmc = invlogit( Assumptions$Harv$age %*% matrix(temp$H.mcmc,nrow = ncol(Assumptions$Harv$age)) %*% Assumptions$Harv$time)
+    temp$fecundity.mcmc = exp( Assumptions$Fec$age %*% matrix(temp$fecundity.mcmc,nrow = ncol(Assumptions$Fec$age),byrow = T) %*% Assumptions$Fec$time)
+    temp$harvest.mcmc = matrix(temp$harvest.mcmc,ncol = n_proj+1)
 	temp$living.mcmc =  matrix(temp$living.mcmc,ncol = n_proj+1)
     temp$aerial.count.mcmc = matrix(temp$aerial.count.mcmc,ncol = n_proj+1)
     return(temp)
@@ -368,12 +368,68 @@ analysisRecruitment = function(mcmc_obj,Assumptions = list(),nage,n_proj){
     living_t = matrix( colSums(living),nrow = 1)
 	hypo_recu = apply(hypo_lambdas,1,"*",living_t[1:n_proj]) - living_t[1:n_proj]
     obs_recu = living_t[1:n_proj+1] - living_t[1:n_proj]
-    lambdas = rbind(hypo_recu,obs_recu)
+    lambdas = rbind(t(hypo_recu),obs_recu)
 	  row.names(lambdas) = c("maximum","uniform_age","stable_age","no_harvest","minimum","observed")
 	  return(lambdas)
   },mcmc_list)
   class(res) = "ReCAP_recruitment"
   return(res)
+}
+
+analysisquotaScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight){
+  mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
+  harv_weight = apply(harv_weight,2,function(k){k/sum(k)})
+  res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight){
+	  temp = mcmc_list[[i]]
+	  get_hypo_harvest_quotaCpp(matrix(temp$living.mcmc[,1]+temp$harvest.mcmc[,1]),
+						  temp$harvest.mcmc,
+						  temp$survival.mcmc,
+						  temp$fecundity.mcmc,
+						  temp$SRB.mcmc,
+						  harv_weight,
+						  TRUE,
+						  list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(10,1,1)), # no DD for now
+						  TRUE)
+  },mcmc_list,harv_weight)
+
+  return(res)
+}
+
+analysisportionScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight){
+    mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
+    harv_weight = apply(harv_weight,2,function(k){k/sum(k)})
+    res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight){
+        temp = mcmc_list[[i]]
+        nage = c(nrow(temp$fecundity.mcmc),nrow(temp$survival.mcmc)-nrow(temp$fecundity.mcmc))
+        period = ncol(temp$fecundity.mcmc)
+        harvest_rate = matrix( colSums(temp$harvest.mcmc)/(colSums(temp$living.mcmc)+colSums(temp$harvest.mcmc)))
+        get_hypo_harvest_portionCpp(matrix(temp$living.mcmc[,1]+temp$harvest.mcmc[,1]),
+                                  harvest_rate,
+                                  temp$survival.mcmc,
+                                  temp$fecundity.mcmc,
+                                  temp$SRB.mcmc,
+                                  harv_weight,
+                                  TRUE,
+                                  list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(10,1,1)), # no DD for now
+                                  TRUE,
+                                  period,nage)
+    },mcmc_list,harv_weight)
+    class(res) = "ReCAP_Scheme"
+    return(res)
+}
+
+
+analysisScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,quota=F){
+    if(quota){
+        res = analysisquotaScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight)
+    }
+    else {
+        res = analysisportionScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight)
+
+
+    }
+    class(res) = "ReCAP_Scheme"
+    return(res)
 }
 
 
@@ -411,10 +467,10 @@ Lambda_plot = function(ReCAP_lambda_obj,start_year=1,alpha=.05){
                     ,high = higher_975[3,]
                     ,year = year)
 	plot_data = rbind(observed,even,nocull,stable)
-	
+
 	if(class(ReCAP_lambda_obj) == "ReCAP_lambda") label_y = "Lambda   X(t+1)/X(t)"
-	if(class(ReCAP_lambda_obj) == "ReCAP_recruitment") label_y = "Recruitment  X(t+1)/X(t)"
-	
+	if(class(ReCAP_lambda_obj) == "ReCAP_recruitment") label_y = "Recruitment  X(t+1)-X(t)"
+
 	ggplot2::ggplot(data = plot_data,aes(x=year,y=lambda,color=point))+
 		geom_line()+
 		geom_point() +
@@ -423,3 +479,31 @@ Lambda_plot = function(ReCAP_lambda_obj,start_year=1,alpha=.05){
 
 }
 
+Scheme_plot = function(ReCAP_Scheme_obj,start_year=1,alpha=.05){
+	Sum_living = lapply(ReCAP_Scheme_obj,colSums)
+    Sum_living = lapply(Sum_living, function(w){w[is.nan(w)]=0;return(w)})
+
+	nyear = length(mean_living)
+	Sum_living_m = Reduce(rbind,Sum_living)
+	mean_living = colMeans(Sum_living_m,na.rm = T)
+	lower_025 = apply(Sum_living_m,2,quantile,probs = alpha/2,na.rm = T)
+
+	higher_975 = apply(Sum_living_m,2,quantile,probs = 1-alpha/2,na.rm = T)
+
+
+	year = 1:nyear + start_year
+	plot_data = data.frame(point = "Post-cull population"
+                      ,liv=mean_living
+                      ,low = lower_025
+                      ,high = higher_975
+                      ,year = year)
+
+
+	label_y = "Post-cull population at scheme"
+
+	ggplot2::ggplot(data = plot_data,aes(x=year,y=liv))+
+		geom_line()+
+		geom_point() +
+		geom_errorbar(aes(ymin=low, ymax=high), width=.1) +
+		labs(y = label_y)
+}

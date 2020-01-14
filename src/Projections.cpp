@@ -4,6 +4,14 @@
 #include <complex>
 using namespace Rcpp;
 
+arma::mat ReLU( arma::mat matr){
+    int n_elem = matr.n_elem;
+    for(int i = 0; i < n_elem ; ++i){
+        matr(i) = std::max(matr(i),0.0);
+    }
+    return(matr);
+}
+
 ///get Leslie matrix from survival etc.
 // [[Rcpp::export]]
 arma::mat getLeslie(const arma::mat& Surv,
@@ -182,8 +190,92 @@ arma::mat get_hypo_Lambdas_helper( const arma::mat& Harv_n // harvest count
   res.row(4).col(0) = min(sum(Leslie_np1));// basically when population are all female fawns.
 
   return(res);
+}
+
+
+
+// Harvest with certain weight and quota
+arma::mat get_hypoharv_quota_helper( const arma::mat& living_n // post cull living individual of year n
+                              , const arma::mat& Surv_np1 // survival of year n+1
+                              , const arma::mat& Fec_np1 // Fecundity of year n+1
+                              , const double& SRB_np1 // SRB of years
+							  , const bool& global
+							  ,	const List& aK0
+							  , const bool & null
+							  , const arma::mat& Harv_np1 // # harvest of year n+1
+							  , const arma::mat & hypoharv_np1 // harvest weight, to test different scheme, e.g. solely adult female can be 0,0,1,1,1,1,1,1,0,0,0
+                              ){
+	arma::mat D_bir = DD(global, living_n, aK0[0], aK0[2] ,null);
+	arma::mat D_dea = DD(global, living_n, aK0[1], aK0[2] ,null);
+	arma::mat Fec_obs = Fec_np1 % D_bir;
+	arma::mat Surv_obs = Surv_np1 % D_dea;
+	arma::mat Living = (getLeslie(Surv_obs, Fec_obs, SRB_np1)*living_n); //just let the population increase
+
+	// now we need to harvest:
+	arma::mat harv_np1 =  ((Living % hypoharv_np1) * (1/(sum(Living % hypoharv_np1)))) * sum(Harv_np1) ;
+
+	return( ReLU( Living-harv_np1));
 
 }
+
+// Harvest quota scheme
+//[[Rcpp::export]]
+
+arma::mat get_hypo_harvest_quotaCpp(const arma::mat& bl // baseline before harvest
+						  , const arma::mat& Harv
+						  , const arma::mat& Surv
+						  , const arma::mat& Fec
+						  , const arma::mat& SRB
+						  , const arma::mat& harv_weight
+						  , const bool& global
+						  ,	const List& aK0
+						  , const bool & null
+						  ){
+	arma::mat Living = 0 * Harv;
+    Living.col(0) = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * sum(Harv.col(0));
+	Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
+
+	int period = Harv.n_cols - 1;
+
+	for(int i=1; i<period + 1; ++i){
+		Living.col(i) = get_hypoharv_quota_helper(Living.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , global , aK0 , null , Harv.col(i) , harv_weight.col(i));
+	}
+
+	return(Living);
+}
+
+// Harvest with certain weight and portion
+//[[Rcpp::export]]
+arma::mat get_hypo_harvest_portionCpp(const arma::mat& bl // baseline before harvest
+
+                                        , const arma::mat& Harv_rate // this should be harvest rate in whole population level
+                                        , const arma::mat& Surv
+                                        , const arma::mat& Fec
+                                        , const arma::mat& SRB
+                                        , const arma::mat& harv_weight
+                                        , const bool& global
+                                        ,	const List& aK0
+                                        , const bool & null
+                                        , const int &period
+                                        , const IntegerVector& nage
+){
+    arma::mat Harv = sum( bl) * Harv_rate(0,0);
+    arma::mat Living(sum(nage),period+1);
+    Living.col(0) = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * Harv;
+    Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
+
+    for(int i=1; i<period + 1; ++i){
+        Harv = sum(Living.col(i-1)) * Harv_rate(i,0);
+        Living.col(i) = get_hypoharv_quota_helper(Living.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , global , aK0 , null , Harv , harv_weight.col(i));
+    }
+
+    return(Living);
+}
+
+
+
+
+
 
 ///get lambda w/, w/o harvest and maximum lambda, single year
 //[[Rcpp::export]]
@@ -208,3 +300,6 @@ arma::mat eyes(const int& n){
   I.eye(n,n);
   return(I);
 }
+
+
+

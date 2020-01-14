@@ -106,6 +106,46 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_hypo_harvest_quotaCpp
+arma::mat get_hypo_harvest_quotaCpp(const arma::mat& bl, const arma::mat& Harv, const arma::mat& Surv, const arma::mat& Fec, const arma::mat& SRB, const arma::mat& harv_weight, const bool& global, const List& aK0, const bool& null);
+RcppExport SEXP _ReCAP_get_hypo_harvest_quotaCpp(SEXP blSEXP, SEXP HarvSEXP, SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP harv_weightSEXP, SEXP globalSEXP, SEXP aK0SEXP, SEXP nullSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type bl(blSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Harv(HarvSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Surv(SurvSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Fec(FecSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type SRB(SRBSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type harv_weight(harv_weightSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type global(globalSEXP);
+    Rcpp::traits::input_parameter< const List& >::type aK0(aK0SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type null(nullSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_hypo_harvest_quotaCpp(bl, Harv, Surv, Fec, SRB, harv_weight, global, aK0, null));
+    return rcpp_result_gen;
+END_RCPP
+}
+// get_hypo_harvest_portionCpp
+arma::mat get_hypo_harvest_portionCpp(const arma::mat& bl, const arma::mat& Harv_rate, const arma::mat& Surv, const arma::mat& Fec, const arma::mat& SRB, const arma::mat& harv_weight, const bool& global, const List& aK0, const bool& null, const int& period, const IntegerVector& nage);
+RcppExport SEXP _ReCAP_get_hypo_harvest_portionCpp(SEXP blSEXP, SEXP Harv_rateSEXP, SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP harv_weightSEXP, SEXP globalSEXP, SEXP aK0SEXP, SEXP nullSEXP, SEXP periodSEXP, SEXP nageSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type bl(blSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Harv_rate(Harv_rateSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Surv(SurvSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Fec(FecSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type SRB(SRBSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type harv_weight(harv_weightSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type global(globalSEXP);
+    Rcpp::traits::input_parameter< const List& >::type aK0(aK0SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type null(nullSEXP);
+    Rcpp::traits::input_parameter< const int& >::type period(periodSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type nage(nageSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_hypo_harvest_portionCpp(bl, Harv_rate, Surv, Fec, SRB, harv_weight, global, aK0, null, period, nage));
+    return rcpp_result_gen;
+END_RCPP
+}
 // get_hypo_Lambdas
 arma::mat get_hypo_Lambdas(const arma::mat& Harvest, const arma::mat& Living, const arma::mat& Harvpar, const arma::mat& Surv, const arma::mat& Fec, const arma::mat& SRB);
 RcppExport SEXP _ReCAP_get_hypo_Lambdas(SEXP HarvestSEXP, SEXP LivingSEXP, SEXP HarvparSEXP, SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP) {
@@ -142,6 +182,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ReCAP_getobsVitals", (DL_FUNC) &_ReCAP_getobsVitals, 3},
     {"_ReCAP_get_obs_LambdasA", (DL_FUNC) &_ReCAP_get_obs_LambdasA, 1},
     {"_ReCAP_get_hypo_Lambdas_helper", (DL_FUNC) &_ReCAP_get_hypo_Lambdas_helper, 7},
+    {"_ReCAP_get_hypo_harvest_quotaCpp", (DL_FUNC) &_ReCAP_get_hypo_harvest_quotaCpp, 9},
+    {"_ReCAP_get_hypo_harvest_portionCpp", (DL_FUNC) &_ReCAP_get_hypo_harvest_portionCpp, 11},
     {"_ReCAP_get_hypo_Lambdas", (DL_FUNC) &_ReCAP_get_hypo_Lambdas, 6},
     {"_ReCAP_eyes", (DL_FUNC) &_ReCAP_eyes, 1},
     {NULL, NULL, 0}
