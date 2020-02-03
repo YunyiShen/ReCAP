@@ -12,6 +12,14 @@ arma::mat ReLU( arma::mat matr){
     return(matr);
 }
 
+arma::mat negPart( arma::mat matr){
+    int n_elem = matr.n_elem;
+    for(int i = 0; i < n_elem ; ++i){
+        matr(i) = -std::min(matr(i),0.0);
+    }
+    return(matr);
+}
+
 ///get Leslie matrix from survival etc.
 // [[Rcpp::export]]
 arma::mat getLeslie(const arma::mat& Surv,
@@ -212,9 +220,13 @@ arma::mat get_hypoharv_quota_helper( const arma::mat& living_n // post cull livi
 	arma::mat Living = (getLeslie(Surv_obs, Fec_obs, SRB_np1)*living_n); //just let the population increase
 
 	// now we need to harvest:
-	arma::mat harv_np1 =  ((Living % hypoharv_np1) * (1/(sum(Living % hypoharv_np1)))) * sum(Harv_np1) ;
+	arma::mat harv_np1 =  ((Living % hypoharv_np1) * (sum(Harv_np1)/(sum(Living % hypoharv_np1)))) ;
+	arma::mat FirstHarv = Living-harv_np1;
+	arma::mat overhead = sum(negPart(FirstHarv));
+	arma::mat stillLiving = ReLU(FirstHarv);
+	arma::mat allocateoverhead = stillLiving * (overhead/sum(stillLiving)) ;
 
-	return( ReLU( Living-harv_np1));
+	return( ReLU( stillLiving-allocateoverhead ));
 
 }
 
