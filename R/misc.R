@@ -470,20 +470,19 @@ Lambda_plot = function(ReCAP_lambda_obj,start_year=1,alpha=.05){
 
 	if(class(ReCAP_lambda_obj) == "ReCAP_lambda") label_y = "Lambda   X(t+1)/X(t)"
 	if(class(ReCAP_lambda_obj) == "ReCAP_recruitment") label_y = "Recruitment  X(t+1)-X(t)"
-
-	ggplot2::ggplot(data = plot_data,aes(x=year,y=lambda,color=point))+
+	res_plot = ggplot2::ggplot(data = plot_data,aes(x=year,y=lambda,color=point))+
 		geom_line()+
 		geom_point() +
 		geom_errorbar(aes(ymin=low, ymax=high), width=.1) +
 		labs(y = label_y)
-
+	return(list(plot = res_plot,data = plot_data))
 }
 
 Scheme_plot = function(ReCAP_Scheme_obj,start_year=1,alpha=.05){
 	Sum_living = lapply(ReCAP_Scheme_obj,colSums)
     Sum_living = lapply(Sum_living, function(w){w[is.nan(w)]=0;return(w)})
 
-	nyear = length(mean_living)
+	nyear = length(Sum_living[[1]])
 	Sum_living_m = Reduce(rbind,Sum_living)
 	mean_living = colMeans(Sum_living_m,na.rm = T)
 	lower_025 = apply(Sum_living_m,2,quantile,probs = alpha/2,na.rm = T)
@@ -499,7 +498,7 @@ Scheme_plot = function(ReCAP_Scheme_obj,start_year=1,alpha=.05){
                       ,year = year)
 
 
-	label_y = "Post-cull population at scheme"
+	label_y = "Post-cull population (# individuals)"
 
 	ggplot2::ggplot(data = plot_data,aes(x=year,y=liv))+
 		geom_line()+
@@ -507,3 +506,48 @@ Scheme_plot = function(ReCAP_Scheme_obj,start_year=1,alpha=.05){
 		geom_errorbar(aes(ymin=low, ymax=high), width=.1) +
 		labs(y = label_y)
 }
+
+plotthings = function(YD_obj,pathsave="./figs/temp/age",nage,period,years,ppt=F,ylabs = "individuals"){ # YD_obj should be a mcmc object, with vital rates in it
+    if(ppt){require(export)}
+    mean.harv = apply(YD_obj,2,mean)
+    mean.harv.matrix = matrix(mean.harv,nrow = nage,ncol = period)
+
+    BI.low.harv = apply(YD_obj,2,quantile,probs = .025)
+    BI.low.harv.matrix = matrix(BI.low.harv,nrow = nage,ncol = period)
+    BI_harv_low = data.frame(age = 1:nage,BI.low.harv.matrix)
+
+
+    BI.high.harv = apply(YD_obj,2,quantile,probs = .975)
+    BI.high.harv.matrix = matrix(BI.high.harv,nrow = nage,ncol = period)
+    BI_harv_high = data.frame(age = 1:nage,BI.high.harv.matrix)
+
+    har_data = data.frame(matrix(nrow = 1,ncol = 5))
+    colnames(har_data) = c("age","mean","low","high","time")
+    har_data = har_data[-1,]
+
+    for(i in 1:nage){
+        temp = data.frame(age = i,mean = mean.harv.matrix[i,],low = BI.low.harv.matrix[i,],high = BI.high.harv.matrix[i,],time = years)
+        har_data = rbind(har_data,temp)
+    }
+    require(ggplot2)
+    res = list(nage)
+    for(i in 1:nage){
+        temp = data.frame(point = "model predict (95% CI)",mean = mean.harv.matrix[i,],low = BI.low.harv.matrix[i,],high = BI.high.harv.matrix[i,],time = years)
+        write.csv(temp,paste0(pathsave,i,".csv"))
+        filename = paste0(pathsave,i,".jpg")
+        plot_temp = ggplot(data.frame(temp),aes(x=time, y=mean, colour = point)) +
+            geom_errorbar(aes(ymin=low, ymax=high), width=.1) +
+            geom_point() +
+            geom_line() +
+            ylab(ylabs) +
+            theme(text = element_text(size=16))
+
+        res[[i]] = plot_temp
+        plot_temp
+        if(ppt)    graph2ppt(file=sub("jpg","pptx",filename))
+        else ggsave(filename, plot = last_plot())
+    }
+    return(res)
+}
+
+
