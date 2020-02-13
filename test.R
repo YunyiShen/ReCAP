@@ -40,9 +40,9 @@ FYA_sex[1:3,1:3] = eyes(3)
 FYA_sex[3:8,3] = 1
 
 
-Assumptions$Fec = list(time = eyes(period),age = FYA)
-Assumptions$err  =list(time = eyes(period))
-Assumptions$Surv = list(time = eyes(period),age = FYA_sex)
+#Assumptions$Fec = list(time = eyes(period),age = FYA)
+#Assumptions$err  =list(time = eyes(period))
+#Assumptions$Surv = list(time = eyes(period),age = FYA_sex)
 # full matrix for e.g. Harvest will be:
 #  Assumptions$Harv$age %*% as.matrix(mean.H) %*% Assumptions$Harv$time
 #  It is a good idea to try the command above to see how to use assumption matrices.
