@@ -4,14 +4,14 @@ sourceCpp("./src/Projections.cpp")
 source("./R/misc.R")
 source("./R/ReCAP.R")
 nage = matrix( c(8,3),2,1) # nage is female first and then male, a vector with lenght usually 2
-period = 14
+period = 16
 
 
 mean.s = read.csv("./_data_/Survival_mean_Etter.csv",row.names = 1)
 mean.f = read.csv("./_data_/Fecundity_mean.csv",row.names = 1)[1:3,]
 mean.SRB = read.csv("./_data_/SRB_mean.csv",row.names = 1)
-Harv.data = read.csv("./_data_/Culling.csv",row.names = 1)
-Aeri.data = read.csv("./_data_/Aerial_count.csv",row.names = 1)
+Harv.data = read.csv("./_data_/Culling_1992_2008.csv",row.names = 1)
+Aeri.data = read.csv("./_data_/Aerial_count_1992_2008.csv",row.names = 1)
 #mean.H = read.csv("./_data_/Harvest_rate_prior.csv",row.names = 1)
 Harv_assump = read.csv("./_data_/Harv_assump.csv",header = F)
 Harv_assump = as.matrix(Harv_assump) # this is the assumption matrix for specific harvest!

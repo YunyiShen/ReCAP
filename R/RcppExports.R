@@ -29,6 +29,14 @@ get_hypo_Lambdas_helper <- function(Harv_n, living, H_n, Surv_np1, Fec_np1, SRB_
     .Call(`_ReCAP_get_hypo_Lambdas_helper`, Harv_n, living, H_n, Surv_np1, Fec_np1, SRB_np1, H_np1)
 }
 
+get_hypo_harvest_quotaCpp <- function(bl, Harv, Surv, Fec, SRB, harv_weight, global, aK0, null) {
+    .Call(`_ReCAP_get_hypo_harvest_quotaCpp`, bl, Harv, Surv, Fec, SRB, harv_weight, global, aK0, null)
+}
+
+get_hypo_harvest_portionCpp <- function(bl, Harv_rate, Surv, Fec, SRB, harv_weight, global, aK0, null, period, nage) {
+    .Call(`_ReCAP_get_hypo_harvest_portionCpp`, bl, Harv_rate, Surv, Fec, SRB, harv_weight, global, aK0, null, period, nage)
+}
+
 get_hypo_Lambdas <- function(Harvest, Living, Harvpar, Surv, Fec, SRB) {
     .Call(`_ReCAP_get_hypo_Lambdas`, Harvest, Living, Harvpar, Surv, Fec, SRB)
 }
