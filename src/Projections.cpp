@@ -220,6 +220,7 @@ arma::mat get_hypoharv_quota_helper( const arma::mat& living_n // post cull livi
 	arma::mat Living = (getLeslie(Surv_obs, Fec_obs, SRB_np1)*living_n); //just let the population increase
 
 	// now we need to harvest:
+	// we want to find a p, propotion of harvest s.t. (p*weight)^T Living=Harvest
 	arma::mat harv_np1 =  ((Living % hypoharv_np1) * (sum(Harv_np1)/(sum(Living % hypoharv_np1)))) ;
 	arma::mat FirstHarv = Living-harv_np1;
 	arma::mat overhead = sum(negPart(FirstHarv));
