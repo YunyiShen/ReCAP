@@ -1,5 +1,6 @@
 require(Rcpp)
 require(RcppArmadillo)
+require(coda)
 sourceCpp("./src/Projections.cpp")
 source("./R/misc.R")
 source("./R/ReCAP.R")
@@ -7,7 +8,7 @@ nage = matrix( c(8,3),2,1) # nage is female first and then male, a vector with l
 period = 16
 
 
-mean.s = read.csv("./_data_/Survival_mean_Etter.csv",row.names = 1)
+mean.s = read.csv("./_data_/Survival_mean_Etter.csv",row.names = 1)#[c(1:3,9:11),]
 mean.f = read.csv("./_data_/Fecundity_mean.csv",row.names = 1)[1:3,]
 mean.SRB = read.csv("./_data_/SRB_mean.csv",row.names = 1)
 Harv.data = read.csv("./_data_/Culling_1992_2008.csv",row.names = 1)
@@ -40,10 +41,10 @@ FYA_sex[1:3,1:3] = eyes(3)
 FYA_sex[3:8,3] = 1
 
 
-Assumptions$Fec = list(time = eyes(period),age = FYA)
-#Assumptions$err  =list(time = matrix(1,1,period))
-#Assumptions$Surv = list(time = eyes(period),age = FYA_sex)
-Assumptions$Surv = list(time = eyes(period),age = eyes(11))
+Assumptions$Fec = list(time = eyes(period),age = eyes(8))
+Assumptions$err  =list(time = matrix(1,1,period))
+Assumptions$Surv = list(time = eyes(period),age = FYA_sex)
+#Assumptions$Surv = list(time = eyes(period),age = eyes(11))
 
 
 # full matrix for e.g. Harvest will be:
@@ -84,4 +85,4 @@ Chicago_RES = ReCAP_sampler( Harv.data = as.matrix(Harv.data)
 							, Observations = Observations
                             , prop.vars = prop.vars, estFec = T,estaK0 = T,null = F,global = T)
 
-save.image("4harv_3fec_11surv_non_equal.RData")
+save.image("4harv_8fec_6surv_equal.RData")
