@@ -41,8 +41,11 @@ FYA_sex[3:8,3] = 1
 
 
 Assumptions$Fec = list(time = eyes(period),age = FYA)
-Assumptions$err  =list(time = matrix(1,1,period))
-Assumptions$Surv = list(time = eyes(period),age = FYA_sex)
+#Assumptions$err  =list(time = matrix(1,1,period))
+#Assumptions$Surv = list(time = eyes(period),age = FYA_sex)
+Assumptions$Surv = list(time = eyes(period),age = eyes(11))
+
+
 # full matrix for e.g. Harvest will be:
 #  Assumptions$Harv$age %*% as.matrix(mean.H) %*% Assumptions$Harv$time
 #  It is a good idea to try the command above to see how to use assumption matrices.
@@ -81,3 +84,4 @@ Chicago_RES = ReCAP_sampler( Harv.data = as.matrix(Harv.data)
 							, Observations = Observations
                             , prop.vars = prop.vars, estFec = T,estaK0 = T,null = F,global = T)
 
+save.image("4harv_3fec_11surv_non_equal.RData")
