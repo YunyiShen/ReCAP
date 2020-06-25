@@ -1,7 +1,7 @@
 require(ggplot2)
 source('./R/misc.R')
 # Just for plotting things
-period = 15
+period = 17
 
 ## Harvest prediction
 mean.harv = apply(Chicago_RES$mcmc.objs$harvest.mcmc,2,mean)
@@ -25,8 +25,8 @@ har_data = har_data[-1,]
 require(ggplot2)
 
 for(i in 1:11){
-  temp1 = data.frame(point = "model predict (95% CI)",mean = mean.harv.matrix[i,],low = BI.low.harv.matrix[i,],high = BI.high.harv.matrix[i,],time = 1992:2006)
-  temp2 = data.frame(point = "data",mean = t(Harv.data[i,1:15]),low =t( Harv.data[i,1:15]),high = t(Harv.data[i,1:15]),time = 1992:2006)
+  temp1 = data.frame(point = "model predict (95% CI)",mean = mean.harv.matrix[i,],low = BI.low.harv.matrix[i,],high = BI.high.harv.matrix[i,],time = 1991+1:period)
+  temp2 = data.frame(point = "data",mean = t(Harv.data[i,1:period]),low =t( Harv.data[i,1:period]),high = t(Harv.data[i,1:period]),time = 1991+1:period)
   colnames(temp2) = colnames(temp1)
   temp = rbind(temp1,temp2)
   write.csv(temp,paste0("./figs/temp/",BI_harv_high$age[i],".csv"))
@@ -58,17 +58,17 @@ for(i in 0:period+1){
 living_inid = (Chicago_RES$mcmc.objs$harvest.mcmc/H_full[,-(1:sum(nage))])*(1-H_full[,-(1:sum(nage))])
 plotthings(YD_obj=living_inid,pathsave="./Main_analysis/figs/temp/living_af_culling_age",sum(nage),period,1993:2006)
 
-total_living = matrix(0,nrow(living_inid),ncol = period)
+total_living = matrix(0,nrow(Chicago_RES$mcmc.objs$living.mcmc),ncol = period)
 
 for(i in 1:period){
-  total_living[,i] = rowSums(living_inid[,1:sum(nage)+(i-1)*sum(nage)])
+  total_living[,i] = rowSums(Chicago_RES$mcmc.objs$living.mcmc[,1:sum(nage)+(i-1)*sum(nage)])
 
 }
 bl = rowSums(Chicago_RES$mcmc.objs$baseline.count.mcmc/(H_full[,(1:sum(nage))])*(1-H_full[,(1:sum(nage))]))
 bl_mean = colMeans(Chicago_RES$mcmc.objs$baseline.count.mcmc/(H_full[,(1:sum(nage))])*(1-H_full[,(1:sum(nage))]))
 total_living_bl = cbind(bl,total_living)
 
-plotthings(YD_obj=total_living_bl,pathsave="./Main_analysis/figs/temp/living_af_culling_all",1,period+1,1992:2006)
+ttt <- plotthings(YD_obj=total_living,pathsave="./living_af_culling_all",1,17,1992:2008)
 
 mean.total.aeri = apply(Chicago_RES$mcmc.objs$aerial.count.mcmc,2,median)
 plot(mean.total.aeri)
