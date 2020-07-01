@@ -376,13 +376,13 @@ analysisRecruitment = function(mcmc_obj,Assumptions = list(),nage,n_proj){
   return(res)
 }
 
-analysisquotaScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight){
+analysisquotaScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,skip = rep(0,n_proj+1)){
   mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
   harv_weight = apply(harv_weight,2,function(k){k/sum(k)})
-  res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight){
+  res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight,skip){
 	  temp = mcmc_list[[i]]
 	  get_hypo_harvest_quotaCpp(matrix(temp$living.mcmc[,1]+temp$harvest.mcmc[,1]),
-						  temp$harvest.mcmc,
+						  temp$harvest.mcmc*(1-skip)+1e-5,
 						  temp$survival.mcmc,
 						  temp$fecundity.mcmc,
 						  temp$SRB.mcmc,
@@ -390,19 +390,20 @@ analysisquotaScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_we
 						  TRUE,
 						  list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(10,1,1)), # no DD for now
 						  TRUE)
-  },mcmc_list,harv_weight)
+  },mcmc_list,harv_weight,skip)
 
   return(res)
 }
 
-analysisportionScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight){
+analysisportionScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,skip = rep(0,n_proj+1)){
     mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
     harv_weight = apply(harv_weight,2,function(k){k/sum(k)})
-    res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight){
+    res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight,skip){
         temp = mcmc_list[[i]]
         nage = c(nrow(temp$fecundity.mcmc),nrow(temp$survival.mcmc)-nrow(temp$fecundity.mcmc))
         period = ncol(temp$fecundity.mcmc)
         harvest_rate = matrix( colSums(temp$harvest.mcmc)/(colSums(temp$living.mcmc)+colSums(temp$harvest.mcmc)))
+        harvest_rate = (harvest_rate * matrix(1-skip))+1e-5
         get_hypo_harvest_portionCpp(matrix(temp$living.mcmc[,1]+temp$harvest.mcmc[,1]),
                                   harvest_rate,
                                   temp$survival.mcmc,
@@ -413,18 +414,18 @@ analysisportionScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_
                                   list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(10,1,1)), # no DD for now
                                   TRUE,
                                   period,nage)
-    },mcmc_list,harv_weight)
+    },mcmc_list,harv_weight,skip)
     class(res) = "ReCAP_Scheme"
     return(res)
 }
 
 
-analysisScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,quota=F){
+analysisScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,quota=F,skip = rep(0,n_proj+1)){
     if(quota){
-        res = analysisquotaScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight)
+        res = analysisquotaScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight,skip)
     }
     else {
-        res = analysisportionScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight)
+        res = analysisportionScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight,skip)
 
 
     }

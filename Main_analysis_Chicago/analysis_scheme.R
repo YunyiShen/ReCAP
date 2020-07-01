@@ -9,6 +9,9 @@ Female_adult_weight = seq(0.5,2.5,0.05)
 mean_dynamic = matrix(NA,length(Female_adult_weight),17)
 sd_dynamic = matrix(NA,length(Female_adult_weight),17)
 
+skip = rep(0,17)
+skip[c(1,3,5,7)] = 1
+
 
 for(i in 1:length(Female_adult_weight)){
   weight = Female_adult_weight[i]
@@ -18,7 +21,7 @@ for(i in 1:length(Female_adult_weight)){
 
   Scheme_temp = ReCAP::analysisScheme(Chicago_RES$mcmc.objs,
                                       Assumptions,c(8,3),
-                                      16,Harvest_matrix_at_this_level,quota = F)
+                                      16,Harvest_matrix_at_this_level,quota = F,skip = skip)
 
   mean_dynamic_temp = Reduce("+",Scheme_temp)/length(Scheme_temp)
 
