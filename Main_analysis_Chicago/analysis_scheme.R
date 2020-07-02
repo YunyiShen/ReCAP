@@ -9,20 +9,24 @@ Female_adult_weight = seq(0.5,2.5,0.05)
 mean_dynamic = matrix(NA,length(Female_adult_weight),17)
 sd_dynamic = matrix(NA,length(Female_adult_weight),17)
 
-skip = rep(0,17)
-skip[c(1,3,5,7)] = 1
+#skip = rep(0,17)
+skipp_years = c(1998,2001,2004,2007)
+all_years = 1992:2008
+skip = 1 * all_years %in% skipp_years
+#skip[c(1,3,5,7)] = 1
 
 
 for(i in 1:length(Female_adult_weight)){
   weight = Female_adult_weight[i]
-  Harvest_weight_vector = c(others,others,rep(weight,6),rep(others,3))
+  Harvest_weight_vector = c(others,weight,rep(weight,6),rep(others,3))
 
   Harvest_matrix_at_this_level = matrix(Harvest_weight_vector,nrow = 11,ncol = 17)
 
   Scheme_temp = ReCAP::analysisScheme(Chicago_RES$mcmc.objs,
                                       Assumptions,c(8,3),
                                       16,Harvest_matrix_at_this_level,quota = F,skip = skip)
-
+  Scheme_temp = as.list(Scheme_temp)
+  Scheme_temp = lapply(Scheme_temp,function(w){k = w; k[is.na(w)]=0; return(k)})
   mean_dynamic_temp = Reduce("+",Scheme_temp)/length(Scheme_temp)
 
   mean_dynamic_temp_sum = colSums(mean_dynamic_temp)
@@ -54,8 +58,8 @@ par.set <-
   list(axis.line = list(col = "transparent"),
        clip = list(panel = "off"))
 
-png("3d_scheme",width = 9,6,"in",res = 500)
-lattice::wireframe(mean_dynamic, shade = TRUE,
+png("3d_scheme_skip98_01_04_07.png",width = 9,6,"in",res = 500)
+lattice::wireframe(mean_dynamic, shade = F,
                    row.values = Female_adult_weight,column.values = 0:16+1992,
                    scales = list(col = "black", arrows = F, x = list(at =  seq(1,2.5,0.5),distance = 1.2),y = list (at = seq(192,2008,4),distance = 1.2), z=list(distance = 1.2)),
                    xlab = "Weight", ylab = "Year",zlab = "Population",
