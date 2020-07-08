@@ -433,6 +433,7 @@ analysisquota_simpleDDScheme = function(mcmc_obj,Assumptions = list(),nage,n_pro
                                             temp$survival.mcmc,
                                             temp$fecundity.mcmc,
                                             temp$SRB.mcmc,
+                                            harv_weight,
                                             K)
     },mcmc_list,harv_weight,skip,K)
 
