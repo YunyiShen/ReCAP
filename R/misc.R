@@ -420,6 +420,48 @@ analysisportionScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_
 }
 
 
+
+
+
+analysisquota_simpleDDScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,skip = rep(0,n_proj+1),K){
+    mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
+    harv_weight = apply(harv_weight,2,function(k){k/sum(k)})
+    res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight,skip,K){
+        temp = mcmc_list[[i]]
+        get_hypo_harvest_quota_simpleDD_Cpp(temp$living.mcmc,
+                                            temp$harvest.mcmc*(1-skip)+1e-5,
+                                            temp$survival.mcmc,
+                                            temp$fecundity.mcmc,
+                                            temp$SRB.mcmc,
+                                            K)
+    },mcmc_list,harv_weight,skip,K)
+
+    return(res)
+}
+
+analysisportion_simpleDDScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,skip = rep(0,n_proj+1),K){
+    mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
+    harv_weight = apply(harv_weight,2,function(k){k/sum(k)})
+    res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight,skip,K){
+        temp = mcmc_list[[i]]
+        nage = c(nrow(temp$fecundity.mcmc),nrow(temp$survival.mcmc)-nrow(temp$fecundity.mcmc))
+        period = ncol(temp$fecundity.mcmc)
+        harvest_rate = matrix( colSums(temp$harvest.mcmc)/(colSums(temp$living.mcmc)+colSums(temp$harvest.mcmc)))
+        harvest_rate = (harvest_rate * matrix(1-skip))+1e-5
+        get_hypo_harvest_portion_simpleDD_Cpp(matrix(temp$living.mcmc[,1]+temp$harvest.mcmc[,1]),
+                                              temp$living.mcmc,
+                                              harvest_rate,
+                                              temp$survival.mcmc,
+                                              temp$fecundity.mcmc,
+                                              temp$SRB.mcmc,
+                                              harv_weight,
+                                              nage,period,K)
+    },mcmc_list,harv_weight,skip,K)
+    class(res) = "ReCAP_Scheme"
+    return(res)
+}
+
+
 analysisScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,quota=F,skip = rep(0,n_proj+1)){
     if(quota){
         res = analysisquotaScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight,skip)
@@ -432,6 +474,23 @@ analysisScheme = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,
     class(res) = "ReCAP_Scheme"
     return(res)
 }
+
+
+
+analysisScheme_SimpleDD = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,quota=F,skip = rep(0,n_proj+1),K){
+    if(quota){
+        res = analysisquota_simpleDDScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight,skip,K)
+    }
+    else {
+        res = analysisportion_simpleDDScheme(mcmc_obj,Assumptions,nage,n_proj,harv_weight,skip,K)
+
+
+    }
+    class(res) = "ReCAP_Scheme"
+    return(res)
+}
+
+
 
 
 Lambda_plot = function(ReCAP_lambda_obj,start_year=1,alpha=.05){

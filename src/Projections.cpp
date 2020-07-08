@@ -231,19 +231,53 @@ arma::mat get_hypoharv_quota_helper( const arma::mat& living_n // post cull livi
 
 }
 
-// Harvest quota scheme
-//[[Rcpp::export]]
 
-arma::mat get_hypo_harvest_quotaCpp(const arma::mat& bl // baseline before harvest
-						  , const arma::mat& Harv
-						  , const arma::mat& Surv
-						  , const arma::mat& Fec
-						  , const arma::mat& SRB
-						  , const arma::mat& harv_weight
-						  , const bool& global
-						  ,	const List& aK0
-						  , const bool & null
-						  ){
+
+
+
+// Harvest with certain weight and quota
+arma::mat get_hypoharv_quota_simple_DD_helper( const arma::mat& living_n, // post cull living individual of year n
+                                               const arma::mat& living_obs_n, // observed living individual
+                                               const arma::mat& Surv_np1, // survival of year n+1
+                                               const arma::mat& Fec_np1, // Fecundity of year n+1
+                                               const double& SRB_np1, // SRB of years
+                                               const arma::mat& Harv_np1, // # harvest of year n+1
+                                               const arma::mat & hypoharv_np1, // harvest weight, to test different scheme, e.g. solely adult female can be 0,0,1,1,1,1,1,1,0,0,0
+                                               const double & K
+){
+    arma::mat Leslie_obs = getLeslie(Surv_np1, Fec_np1, SRB_np1);
+    Leslie_obs.diag() -= 1;
+    arma::mat Leslie_intr = Leslie_obs/as_scalar(1-sum(living_obs_n)/K);
+    arma::mat Leslie_hypo = Leslie_intr * as_scalar(1-sum(living_n)/K);
+    arma::mat Living = living_n + (Leslie_hypo*living_n); //just let the population increase
+    // now we need to harvest:
+    // we want to find a p, propotion of harvest s.t. (p*weight)^T Living=Harvest
+    arma::mat harv_np1 =  ((Living % hypoharv_np1) * (sum(Harv_np1)/(sum(Living % hypoharv_np1)))) ;
+    arma::mat FirstHarv = Living-harv_np1;
+    arma::mat overhead = sum(negPart(FirstHarv));
+    arma::mat stillLiving = ReLU(FirstHarv);
+    arma::mat allocateoverhead = stillLiving * (overhead/sum(stillLiving)) ;
+
+    return( ReLU( stillLiving-allocateoverhead ));
+
+}
+
+
+
+
+// Harvest quota scheme
+
+//[[Rcpp::export]]
+arma::mat get_hypo_harvest_quotaCpp(const arma::mat& bl, // baseline before harvest
+                                    const arma::mat& Harv,
+                                    const arma::mat& Surv,
+                                    const arma::mat& Fec,
+                                    const arma::mat& SRB,
+                                    const arma::mat& harv_weight,
+                                    const bool& global,
+                                    const List& aK0,
+                                    const bool & null
+){
 	arma::mat Living = 0 * Harv;
     Living.col(0) = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * sum(Harv.col(0));
 	Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
@@ -280,6 +314,59 @@ arma::mat get_hypo_harvest_portionCpp(const arma::mat& bl // baseline before har
     for(int i=1; i<period + 1; ++i){
         Harv = sum(Living.col(i-1)) * Harv_rate(i,0);
         Living.col(i) = get_hypoharv_quota_helper(Living.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , global , aK0 , null , Harv , harv_weight.col(i));
+    }
+
+    return(Living);
+}
+
+
+//[[Rcpp::export]]
+arma::mat get_hypo_harvest_quota_simpleDD_Cpp(const arma::mat& living_obs, // baseline before harvest
+                                              const arma::mat& Harv,
+                                              const arma::mat& Surv,
+                                              const arma::mat& Fec,
+                                              const arma::mat& SRB,
+                                              const arma::mat& harv_weight,
+                                              const double& K
+){
+    arma::mat Living = 0 * Harv;
+    Living.col(0) = (living_obs.col(0)+Harv.col(0)) - (((living_obs.col(0)+Harv.col(0)) % harv_weight.col(0)) * (1/(sum((living_obs.col(0)+Harv.col(0)) % harv_weight.col(0))))) * sum(Harv.col(0));
+    Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
+
+    int period = Harv.n_cols - 1;
+
+    for(int i=1; i<period + 1; ++i){
+        Living.col(i) = get_hypoharv_quota_simple_DD_helper(Living.col(i-1), living_obs.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , Harv.col(i) , harv_weight.col(i),K);
+    }
+
+    return(Living);
+}
+
+// Harvest with certain weight and portion
+//[[Rcpp::export]]
+arma::mat get_hypo_harvest_portion_simpleDD_Cpp(const arma::mat& bl,
+                                                const arma::mat& living_obs,
+                                                const arma::mat& Harv_rate,
+                                                const arma::mat& Surv,
+                                                const arma::mat& Fec,
+                                                const arma::mat& SRB,
+                                                const arma::mat& harv_weight,
+                                                const IntegerVector& nage,
+                                                const int& period,
+                                                const double& K
+){
+    //printf("flag\n");
+    arma::mat Harv = sum( bl) * Harv_rate(0,0);
+
+    arma::mat Living(sum(nage),period+1);
+    Living.col(0) = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * Harv;
+    Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
+
+    for(int i=1; i<period + 1; ++i){
+
+        Harv = sum(Living.col(i-1)) * Harv_rate(i,0);
+
+        Living.col(i) = get_hypoharv_quota_simple_DD_helper(Living.col(i-1), living_obs.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , Harv , harv_weight.col(i),K);
     }
 
     return(Living);
