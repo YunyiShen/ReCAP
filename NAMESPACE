@@ -14,4 +14,4 @@ export(Lambda_plot)
 export(getLeslie)
 export(ProjectHarvest)
 export(eyes)
-
+export(analysisScheme_SimpleDD)
