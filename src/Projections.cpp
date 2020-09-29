@@ -247,16 +247,17 @@ arma::mat get_hypoharv_quota_simple_DD_helper( const arma::mat& living_n, // pos
 ){
     arma::mat Leslie_obs = getLeslie(Surv_np1, Fec_np1, SRB_np1);
     Leslie_obs.diag() -= 1;
-    arma::mat Leslie_intr = Leslie_obs/as_scalar(1-sum(living_obs_n)/K);
+	
+    arma::mat Leslie_intr = abs(as_scalar(1-sum(living_obs_n)/K))<=0.01?zeros(size(Leslie_obs)):Leslie_obs/as_scalar(1-sum(living_obs_n)/K);
     arma::mat Leslie_hypo = Leslie_intr * as_scalar(1-sum(living_n)/K);
     arma::mat Living = living_n + (Leslie_hypo*living_n); //just let the population increase
     // now we need to harvest:
     // we want to find a p, propotion of harvest s.t. (p*weight)^T Living=Harvest
-    arma::mat harv_np1 =  ((Living % hypoharv_np1) * (sum(Harv_np1)/(sum(Living % hypoharv_np1)))) ;
+    arma::mat harv_np1 =  ((Living % hypoharv_np1) * (sum(Harv_np1)/(sum(Living % hypoharv_np1)+.1))) ;
     arma::mat FirstHarv = Living-harv_np1;
     arma::mat overhead = sum(negPart(FirstHarv));
     arma::mat stillLiving = ReLU(FirstHarv);
-    arma::mat allocateoverhead = stillLiving * (overhead/sum(stillLiving)) ;
+    arma::mat allocateoverhead = stillLiving * (overhead/(sum(stillLiving)+.1)) ;
 
     return( ReLU( stillLiving-allocateoverhead ));
 

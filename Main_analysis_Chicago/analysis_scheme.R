@@ -4,7 +4,7 @@ require(dplyr)
 
 
 others = 1
-Female_adult_weight = seq(0.5,2.5,0.05)
+Female_adult_weight = seq(0.5,2,0.05)
 
 mean_dynamic = matrix(NA,length(Female_adult_weight),17)
 sd_dynamic = matrix(NA,length(Female_adult_weight),17)
@@ -22,9 +22,9 @@ for(i in 1:length(Female_adult_weight)){
 
   Harvest_matrix_at_this_level = matrix(Harvest_weight_vector,nrow = 11,ncol = 17)
 
-  Scheme_temp = ReCAP::analysisScheme(Chicago_RES$mcmc.objs,
+  Scheme_temp = ReCAP::analysisScheme_SimpleDD(Chicago_RES$mcmc.objs,
                                       Assumptions,c(8,3),
-                                      16,Harvest_matrix_at_this_level,quota = F,skip = skip)
+                                      16,Harvest_matrix_at_this_level,quota = F,skip = skip,2000)
   Scheme_temp = as.list(Scheme_temp)
   Scheme_temp = lapply(Scheme_temp,function(w){k = w; k[is.na(w)]=0; return(k)})
   mean_dynamic_temp = Reduce("+",Scheme_temp)/length(Scheme_temp)
@@ -58,7 +58,7 @@ par.set <-
   list(axis.line = list(col = "transparent"),
        clip = list(panel = "off"))
 
-png("3d_scheme_skip98_01_04_07.png",width = 9,6,"in",res = 500)
+png("3d_scheme_DDK2000_skip98010407.png",width = 9,6,"in",res = 500)
 lattice::wireframe(mean_dynamic, shade = F,
                    row.values = Female_adult_weight,column.values = 0:16+1992,
                    scales = list(col = "black", arrows = F, x = list(at =  seq(1,2.5,0.5),distance = 1.2),y = list (at = seq(192,2008,4),distance = 1.2), z=list(distance = 1.2)),
