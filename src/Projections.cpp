@@ -12,6 +12,14 @@ arma::mat ReLU( arma::mat matr){
     return(matr);
 }
 
+arma::mat ReLU1( arma::mat matr){
+    int n_elem = matr.n_elem;
+    for(int i = 0; i < n_elem ; ++i){
+        matr(i) = std::max(matr(i),1.0);
+    }
+    return(matr);
+}
+
 arma::mat negPart( arma::mat matr){
     int n_elem = matr.n_elem;
     for(int i = 0; i < n_elem ; ++i){
@@ -227,7 +235,7 @@ arma::mat get_hypoharv_quota_helper( const arma::mat& living_n // post cull livi
 	arma::mat stillLiving = ReLU(FirstHarv);
 	arma::mat allocateoverhead = stillLiving * (overhead/sum(stillLiving)) ;
 
-	return( ReLU( stillLiving-allocateoverhead ));
+	return( ReLU1( stillLiving-allocateoverhead ));
 
 }
 
@@ -249,7 +257,7 @@ arma::mat get_hypoharv_quota_simple_DD_helper( const arma::mat& living_n, // pos
     Leslie_obs.diag() -= 1;
 
     arma::mat Leslie_intr;
-    if((std::abs(as_scalar(1-sum(living_obs_n)/K)))<=0.01) {
+    if(((as_scalar(1-sum(living_obs_n)/K)))<=0.01) {
         Leslie_intr = zeros(size(Leslie_obs));
     }
     else{
@@ -265,7 +273,7 @@ arma::mat get_hypoharv_quota_simple_DD_helper( const arma::mat& living_n, // pos
     arma::mat stillLiving = ReLU(FirstHarv);
     arma::mat allocateoverhead = stillLiving * (overhead/(sum(stillLiving)+.1)) ;
 
-    return( ReLU( stillLiving-allocateoverhead ));
+    return( ReLU1( stillLiving-allocateoverhead ));
 
 }
 
@@ -287,7 +295,7 @@ arma::mat get_hypo_harvest_quotaCpp(const arma::mat& bl, // baseline before harv
 ){
 	arma::mat Living = 0 * Harv;
     Living.col(0) = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * sum(Harv.col(0));
-	Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
+	Living.col(0) = ReLU1(Living.col(0)) ;//first year, baseline
 
 	int period = Harv.n_cols - 1;
 
@@ -316,7 +324,7 @@ arma::mat get_hypo_harvest_portionCpp(const arma::mat& bl // baseline before har
     arma::mat Harv = sum( bl) * Harv_rate(0,0);
     arma::mat Living(sum(nage),period+1);
     Living.col(0) = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * Harv;
-    Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
+    Living.col(0) = ReLU1(Living.col(0)) ;//first year, baseline
 
     for(int i=1; i<period + 1; ++i){
         Harv = sum(Living.col(i-1)) * Harv_rate(i,0);
@@ -338,7 +346,7 @@ arma::mat get_hypo_harvest_quota_simpleDD_Cpp(const arma::mat& living_obs, // ba
 ){
     arma::mat Living = 0 * Harv;
     Living.col(0) = (living_obs.col(0)+Harv.col(0)) - (((living_obs.col(0)+Harv.col(0)) % harv_weight.col(0)) * (1/(sum((living_obs.col(0)+Harv.col(0)) % harv_weight.col(0))))) * sum(Harv.col(0));
-    Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
+    Living.col(0) = ReLU1(Living.col(0)) ;//first year, baseline
 
     int period = Harv.n_cols - 1;
 
@@ -367,7 +375,7 @@ arma::mat get_hypo_harvest_portion_simpleDD_Cpp(const arma::mat& bl,
 
     arma::mat Living(sum(nage),period+1);
     Living.col(0) = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * Harv;
-    Living.col(0) = ReLU(Living.col(0)) ;//first year, baseline
+    Living.col(0) = ReLU1(Living.col(0)) ;//first year, baseline
 
     for(int i=1; i<period + 1; ++i){
 
