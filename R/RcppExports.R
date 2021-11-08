@@ -53,3 +53,7 @@ eyes <- function(n) {
     .Call(`_ReCAP_eyes`, n)
 }
 
+get_hypo_harvest_portion_simpleDD_fullrec_Cpp <- function(bl, living_obs, Harv_rate, Surv, Fec, SRB, harv_weight, nage, period, K) {
+    .Call(`_ReCAP_get_hypo_harvest_portion_simpleDD_fullrec_Cpp`, bl, living_obs, Harv_rate, Surv, Fec, SRB, harv_weight, nage, period, K)
+}
+
