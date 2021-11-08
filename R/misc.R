@@ -448,7 +448,7 @@ analysisportion_simpleDDScheme = function(mcmc_obj,Assumptions = list(),nage,n_p
         nage = c(nrow(temp$fecundity.mcmc),nrow(temp$survival.mcmc)-nrow(temp$fecundity.mcmc))
         period = ncol(temp$fecundity.mcmc)
         harvest_rate = matrix( colSums(temp$harvest.mcmc)/(colSums(temp$living.mcmc)+colSums(temp$harvest.mcmc)))
-        harvest_rate = (harvest_rate * matrix(1-skip))+1e-5
+        harvest_rate = (harvest_rate * matrix(1-skip)) + 1e-5 * matrix(skip)
         get_hypo_harvest_portion_simpleDD_Cpp(matrix(temp$living.mcmc[,1]+temp$harvest.mcmc[,1]),
                                               temp$living.mcmc,
                                               harvest_rate,

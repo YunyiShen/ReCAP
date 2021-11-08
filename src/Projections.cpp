@@ -257,7 +257,7 @@ arma::mat get_hypoharv_quota_simple_DD_helper( const arma::mat& living_n, // pos
     Leslie_obs.diag() -= 1;
 
     arma::mat Leslie_intr;
-    if(((as_scalar(1-sum(living_obs_n)/K)))<=0.01) {
+    if(abs((as_scalar(1-sum(living_obs_n)/K)))<=0.01) {
         Leslie_intr = zeros(size(Leslie_obs));
     }
     else{
@@ -265,6 +265,7 @@ arma::mat get_hypoharv_quota_simple_DD_helper( const arma::mat& living_n, // pos
     }
     arma::mat Leslie_hypo = Leslie_intr * as_scalar(1-sum(living_n)/K);
     arma::mat Living = living_n + (Leslie_hypo*living_n); //just let the population increase
+    Living = ReLU1(Living);
     // now we need to harvest:
     // we want to find a p, propotion of harvest s.t. (p*weight)^T Living=Harvest
     arma::mat harv_np1 =  ((Living % hypoharv_np1) * (sum(Harv_np1)/(sum(Living % hypoharv_np1)+.1))) ;
@@ -276,6 +277,50 @@ arma::mat get_hypoharv_quota_simple_DD_helper( const arma::mat& living_n, // pos
     return( ReLU1( stillLiving-allocateoverhead ));
 
 }
+
+
+arma::mat get_hypoharv_portion_simple_DD_helper( const arma::mat& living_n, // post cull living individual of year n
+                                               const arma::mat& living_obs_n, // observed living individual
+                                               const arma::mat& Surv_np1, // survival of year n+1
+                                               const arma::mat& Fec_np1, // Fecundity of year n+1
+                                               const double& SRB_np1, // SRB of years
+                                               const double& Harv_rate_np1, // # harvest of year n+1
+                                               const arma::mat & hypoharv_np1, // harvest weight, to test different scheme, e.g. solely adult female can be 0,0,1,1,1,1,1,1,0,0,0
+                                               const double & K
+){
+    arma::mat Leslie_obs = getLeslie(Surv_np1, Fec_np1, SRB_np1);
+    Leslie_obs.diag() -= 1;
+
+    arma::mat Leslie_intr;
+    if((std::abs(as_scalar(1-sum(living_obs_n)/K)))<=0.01) {
+        Leslie_intr = zeros(size(Leslie_obs));
+    }
+    else{
+        Leslie_intr = Leslie_obs/std::abs(as_scalar(1-sum(living_obs_n)/K));
+    }
+    double obs_DD = as_scalar(1-sum(living_n)/K);
+    obs_DD = obs_DD <= -0.1 ? -0.1 : obs_DD;
+    arma::mat Leslie_hypo = Leslie_intr * obs_DD;
+    arma::mat Living = living_n + (Leslie_hypo*living_n); //just let the population increase
+    arma::mat growth_overhead = sum(negPart(Living));
+    Living = ReLU(Living);
+    arma::mat allocateoverhead_growth = Living * (growth_overhead/(sum(Living)));
+    Living = ReLU1(Living-allocateoverhead_growth);
+
+    // now we need to harvest:
+    // we want to find a p, propotion of harvest s.t. (p*weight)^T Living=Harvest
+    double Harv_np1 = as_scalar(sum(Living)) * Harv_rate_np1;
+    arma::mat harv_np1 =  ((Living % hypoharv_np1) * ((Harv_np1)/(sum(Living % hypoharv_np1)))) ;
+    arma::mat FirstHarv = Living-harv_np1;
+    arma::mat overhead = sum(negPart(FirstHarv));
+    arma::mat stillLiving = ReLU(FirstHarv);
+    arma::mat allocateoverhead = stillLiving * (overhead/(sum(stillLiving)+.1)) ;
+
+    return( ReLU1( stillLiving-allocateoverhead ));
+
+}
+
+
 
 
 
@@ -374,14 +419,19 @@ arma::mat get_hypo_harvest_portion_simpleDD_Cpp(const arma::mat& bl,
     arma::mat Harv = sum( bl) * Harv_rate(0,0);
 
     arma::mat Living(sum(nage),period+1);
-    Living.col(0) = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * Harv;
-    Living.col(0) = ReLU1(Living.col(0)) ;//first year, baseline
+    arma::mat baseyear = bl - ((bl % harv_weight.col(0)) * (1/(sum(bl % harv_weight.col(0))))) * Harv;
+    arma::mat baseyear_overhead = sum(negPart(baseyear));
+    baseyear = ReLU(baseyear);
+    arma::mat allocateoverhead_baseyear = baseyear * (baseyear_overhead/(sum(baseyear)));
+    baseyear = ReLU1(baseyear-allocateoverhead_baseyear);
+
+    Living.col(0) = ReLU1(baseyear);
 
     for(int i=1; i<period + 1; ++i){
 
-        Harv = sum(Living.col(i-1)) * Harv_rate(i,0);
+        //Harv = sum(Living.col(i-1)) * Harv_rate(i,0);
 
-        Living.col(i) = get_hypoharv_quota_simple_DD_helper(Living.col(i-1), living_obs.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , Harv , harv_weight.col(i),K);
+        Living.col(i) = get_hypoharv_portion_simple_DD_helper(Living.col(i-1), living_obs.col(i-1) , Surv.col(i-1) , Fec.col(i-1) , SRB(0,i-1) , Harv_rate(i,0) , harv_weight.col(i),K);
     }
 
     return(Living);
