@@ -1,4 +1,5 @@
 
+The package is in branch `Vital-as-data-core` and analysis can be found in `vital-rate-as-data`
 
 Introduction
 ============
