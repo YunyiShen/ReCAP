@@ -1,5 +1,7 @@
 
 
+This is the package ReCAP: **Re**construction **C**ulled and **A**erial-counted **P**opulation, the clean package is in branch `clean-package` and analysis is in `Chicago-analysis`
+
 Introduction
 ============
 
