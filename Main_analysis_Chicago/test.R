@@ -63,7 +63,7 @@ prop.vars = list(Fec = matrix(1,nrow = nage[1],ncol = period),
 
 prior.measurement.error = list(Alpha = list(Fec = 3,Surv = 3,SRB = 3),Beta = list(Fec=1,Surv = 1,SRB=.5))
 
-ProjectAllCpp(as.matrix(mean.s),mean.H.full,as.matrix(mean.f), as.matrix(mean.SRB),mean.aK0,T,F,as.matrix(mean.b),period,c(8,3))
+#ProjectAllCpp(as.matrix(mean.s),mean.H.full,as.matrix(mean.f), as.matrix(mean.SRB),mean.aK0,T,F,as.matrix(mean.b),period,c(8,3))
 
 
 set.seed(42)
@@ -85,4 +85,4 @@ Chicago_RES = ReCAP_sampler( Harv.data = as.matrix(Harv.data)
 							, Observations = Observations
                             , prop.vars = prop.vars, estFec = T,estaK0 = T,null = F,global = T)
 
-save.image("4harv_8fec_6surv_equal.RData")
+save.image("4harv_8fec_6surv_equal_20220307.RData")
