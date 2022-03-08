@@ -448,7 +448,7 @@ analysisportion_simpleDDScheme = function(mcmc_obj,Assumptions = list(),nage,n_p
         nage = c(nrow(temp$fecundity.mcmc),nrow(temp$survival.mcmc)-nrow(temp$fecundity.mcmc))
         period = ncol(temp$fecundity.mcmc)
         harvest_rate = matrix( colSums(temp$harvest.mcmc)/(colSums(temp$living.mcmc)+colSums(temp$harvest.mcmc)))
-        harvest_rate = (harvest_rate * matrix(1-skip))+1e-5
+        harvest_rate = (harvest_rate * matrix(1-skip)) + 1e-5 * matrix(skip)
         get_hypo_harvest_portion_simpleDD_Cpp(matrix(temp$living.mcmc[,1]+temp$harvest.mcmc[,1]),
                                               temp$living.mcmc,
                                               harvest_rate,
@@ -610,5 +610,37 @@ plotthings = function(YD_obj,pathsave="./figs/temp/age",nage,period,years,ppt=F,
     }
     return(res)
 }
+
+
+
+analysisportion_simpleDDScheme_full = function(mcmc_obj,Assumptions = list(),nage,n_proj,harv_weight,skip = rep(0,n_proj+1),K){
+    mcmc_list = getListmcmc_full(mcmc_obj,Assumptions,nage,n_proj)
+    harv_weight = apply(harv_weight,2,function(k){k/sum(k)})
+    res = lapply(1:length(mcmc_list),function(i,mcmc_list,harv_weight,skip,K){
+        temp = mcmc_list[[i]]
+        nage = c(nrow(temp$fecundity.mcmc),nrow(temp$survival.mcmc)-nrow(temp$fecundity.mcmc))
+        period = ncol(temp$fecundity.mcmc)
+        harvest_rate = matrix( colSums(temp$harvest.mcmc)/(colSums(temp$living.mcmc)+colSums(temp$harvest.mcmc)))
+        harvest_rate = (harvest_rate * matrix(1-skip)) + 1e-5 * matrix(skip)
+        get_hypo_harvest_portion_simpleDD_fullrec_Cpp(matrix(temp$living.mcmc[,1]+temp$harvest.mcmc[,1]),
+                                              temp$living.mcmc,
+                                              harvest_rate,
+                                              temp$survival.mcmc,
+                                              temp$fecundity.mcmc,
+                                              temp$SRB.mcmc,
+                                              harv_weight,
+                                              nage,period,K)
+    },mcmc_list,harv_weight,skip,K)
+    class(res) = "ReCAP_Scheme_full"
+    return(res)
+}
+
+
+
+
+
+
+
+
 
 

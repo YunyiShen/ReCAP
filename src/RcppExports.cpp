@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // getLeslie
 arma::mat getLeslie(const arma::mat& Surv, const arma::mat& Fec, const double& SRB);
 RcppExport SEXP _ReCAP_getLeslie(SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP) {
@@ -210,6 +215,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_hypo_harvest_portion_simpleDD_fullrec_Cpp
+List get_hypo_harvest_portion_simpleDD_fullrec_Cpp(const arma::mat& bl, const arma::mat& living_obs, const arma::mat& Harv_rate, const arma::mat& Surv, const arma::mat& Fec, const arma::mat& SRB, const arma::mat& harv_weight, const IntegerVector& nage, const int& period, const double& K);
+RcppExport SEXP _ReCAP_get_hypo_harvest_portion_simpleDD_fullrec_Cpp(SEXP blSEXP, SEXP living_obsSEXP, SEXP Harv_rateSEXP, SEXP SurvSEXP, SEXP FecSEXP, SEXP SRBSEXP, SEXP harv_weightSEXP, SEXP nageSEXP, SEXP periodSEXP, SEXP KSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type bl(blSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type living_obs(living_obsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Harv_rate(Harv_rateSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Surv(SurvSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Fec(FecSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type SRB(SRBSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type harv_weight(harv_weightSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type nage(nageSEXP);
+    Rcpp::traits::input_parameter< const int& >::type period(periodSEXP);
+    Rcpp::traits::input_parameter< const double& >::type K(KSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_hypo_harvest_portion_simpleDD_fullrec_Cpp(bl, living_obs, Harv_rate, Surv, Fec, SRB, harv_weight, nage, period, K));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ReCAP_getLeslie", (DL_FUNC) &_ReCAP_getLeslie, 3},
@@ -225,6 +250,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ReCAP_get_hypo_harvest_portion_simpleDD_Cpp", (DL_FUNC) &_ReCAP_get_hypo_harvest_portion_simpleDD_Cpp, 10},
     {"_ReCAP_get_hypo_Lambdas", (DL_FUNC) &_ReCAP_get_hypo_Lambdas, 6},
     {"_ReCAP_eyes", (DL_FUNC) &_ReCAP_eyes, 1},
+    {"_ReCAP_get_hypo_harvest_portion_simpleDD_fullrec_Cpp", (DL_FUNC) &_ReCAP_get_hypo_harvest_portion_simpleDD_fullrec_Cpp, 10},
     {NULL, NULL, 0}
 };
 
