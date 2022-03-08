@@ -37,11 +37,23 @@ get_hypo_harvest_portionCpp <- function(bl, Harv_rate, Surv, Fec, SRB, harv_weig
     .Call(`_ReCAP_get_hypo_harvest_portionCpp`, bl, Harv_rate, Surv, Fec, SRB, harv_weight, global, aK0, null, period, nage)
 }
 
+get_hypo_harvest_quota_simpleDD_Cpp <- function(living_obs, Harv, Surv, Fec, SRB, harv_weight, K) {
+    .Call(`_ReCAP_get_hypo_harvest_quota_simpleDD_Cpp`, living_obs, Harv, Surv, Fec, SRB, harv_weight, K)
+}
+
+get_hypo_harvest_portion_simpleDD_Cpp <- function(bl, living_obs, Harv_rate, Surv, Fec, SRB, harv_weight, nage, period, K) {
+    .Call(`_ReCAP_get_hypo_harvest_portion_simpleDD_Cpp`, bl, living_obs, Harv_rate, Surv, Fec, SRB, harv_weight, nage, period, K)
+}
+
 get_hypo_Lambdas <- function(Harvest, Living, Harvpar, Surv, Fec, SRB) {
     .Call(`_ReCAP_get_hypo_Lambdas`, Harvest, Living, Harvpar, Surv, Fec, SRB)
 }
 
 eyes <- function(n) {
     .Call(`_ReCAP_eyes`, n)
+}
+
+get_hypo_harvest_portion_simpleDD_fullrec_Cpp <- function(bl, living_obs, Harv_rate, Surv, Fec, SRB, harv_weight, nage, period, K) {
+    .Call(`_ReCAP_get_hypo_harvest_portion_simpleDD_fullrec_Cpp`, bl, living_obs, Harv_rate, Surv, Fec, SRB, harv_weight, nage, period, K)
 }
 
