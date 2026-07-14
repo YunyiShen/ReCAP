@@ -1,2 +1,12 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^\.Rhistory$
+^\.RData$
+^\.Ruserdata$
+^\.git$
+^\.gitignore$
+^\.agents$
+^\.codex$
+^Main_analysis_Chicago$
+^_data_$
+^src/.*\.(o|so|dll)$

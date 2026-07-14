@@ -26,8 +26,8 @@ Assumptions$Harv = list(time = diag(period+1),age = Harv_assump) # tons of assum
 
 
 
-prior.mean = list(Fec = c(0.5,1,2),Surv = 0.6, SRB = 0.5, Harv = 0.5, AerialDet = 0.7)
-prior.var = list(Fec = c(.2,.2,.2),Surv = 2, SRB = .1, Harv = .8, AerialDet = .8)
+prior.mean = list(Fec = c(0.1,1,2),Surv = 0.8, SRB = 0.5, Harv = 0.5, AerialDet = 0.7)
+prior.var = list(Fec = c(.1,.1,.1),Surv = .5, SRB = .1, Harv = .5, AerialDet = .5)
 
 FYA = matrix(0,8,3)
 FYA[1,1] = 1
@@ -55,12 +55,12 @@ Assumptions$Surv = list(time = diag(period),age = Surv_assump)
 #  It is a good idea to try the command above to see how to use assumption matrices.
 
 mean.A = matrix(0.7,1,period+1)
-mean.aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(10,1,1))
-prop.vars = list(Fec = matrix(1,nrow = nage[1],ncol = period),
-                 Surv = matrix(1,nrow = sum(nage), ncol = period),
-                 SRB = matrix(0.1,nage[1],period), # vital rates has period cols
-                 AerialDet = matrix(1,1,period+1),
-                 Harv = matrix(1,nrow = 4,ncol = period+1),
+mean.aK0 = list(matrix(0,nage[1],1),matrix(0,sum(nage),1),matrix(1000,1,1))
+prop.vars = list(Fec = matrix(.01,nrow = period,ncol = ncol(Fec_assump)),
+                 Surv = matrix(.1,nrow = period,ncol = ncol(Surv_assump)),
+                 SRB = matrix(0.1,nrow = period,ncol = 1), # vital rates has period rows
+                 AerialDet = matrix(1,nrow = period+1,ncol = 1),
+                 Harv = matrix(1,nrow = period+1,ncol = ncol(Harv_assump)),
                  aK0=list(5e-8,5e-8,50),
                  baseline.pop.count = matrix(.1,nrow = sum(nage),ncol = 1))
 
@@ -75,17 +75,22 @@ Chicago_RES = ReCAP_sampler( Harv.data = as.matrix(Harv.data)
                             , Aerial.data = as.matrix( Aeri.data)
 							, nage = nage
 							, measure.Fec = as.matrix(mean.f)
-							, measure.Surv = as.matrix(NA + mean.s)
+							, measure.Surv = as.matrix(mean.s)
 							, measure.SRB =  mean.SRB
 							, prior.mean = prior.mean
 							, prior.var = prior.var
 							, prior.ageclass = prior.ageclass
-							, n.iter = 2e5, burn.in = 1e4,thin.by = 100
+							, n.iter = 1e5, burn.in = 1e4,thin.by = 1e2
 							, prior.measurement.err = prior.measurement.error
+							, aK0 = mean.aK0
                             , min.aK0 = list(matrix(-.001,nage[1],1),matrix(-.001,sum(nage),1),100)
                             , max.aK0 = list(matrix(.001,nage[1],1),matrix(.001,sum(nage),1),1500)
 							, Assumptions = Assumptions
 							, Observations = Observations
                             , prop.vars = prop.vars, estFec = T,estaK0 = T,null = F,global = T)
 
-save.image("./Main_analysis_Chicago/models_to_be_selected/6harv_4surv_3fec_equal/6harv_4surv_3fec_equal.RData")
+save.image("./Main_analysis_Chicago/models_to_be_selected/6harv_4surv_3fec_equal/6harv_4surv_3fec_equal_Jul2026_estsurv.RData")
+
+
+Chicago_RES$mcmc.objs$fecundity.mcmc |> exp() |> colMeans() |> matrix(ncol = 3)
+1/(1+exp(-Chicago_RES$mcmc.objs$survival.mcmc |> colMeans() |> matrix(ncol = 4)))
