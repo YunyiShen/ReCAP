@@ -12,11 +12,11 @@ Check_assumptions = function(Assumptions, nage, proj.period){
 }
 
 Check_prior_measurement_err = function(obj){
-	if(is.null(obj$Alpah$Fec)) obj$Alpah$Fec = 3
+	if(is.null(obj$Alpha$Fec)) obj$Alpha$Fec = 3
 	if(is.null(obj$Beta$Fec)) obj$Beta$Fec = 1
-	if(is.null(obj$Alpah$Surv)) obj$Alpah$Surv = 3
+	if(is.null(obj$Alpha$Surv)) obj$Alpha$Surv = 3
 	if(is.null(obj$Beta$Surv)) obj$Beta$Surv = 1
-	if(is.null(obj$Alpah$SRB)) obj$Alpah$SRB = 3
+	if(is.null(obj$Alpha$SRB)) obj$Alpha$SRB = 3
 	if(is.null(obj$Beta$SRB)) obj$Beta$SRB = .5
 	return(obj)
 
@@ -29,6 +29,14 @@ Check_start_measurement_err = function(obj,Ass_var){
 	if(is.null(obj$SRB)) obj$SRB = matrix(.05,1,n)
 
 	return(obj)
+}
+
+invalid_projection = function(proj, s.tol){
+	any(!is.finite(proj$Harvest)) || any(proj$Harvest < 0) ||
+		any(!is.finite(proj$Living)) || any(proj$Living < 0) ||
+		any(!is.finite(proj$Fec_obs)) || any(proj$Fec_obs <= 0) ||
+		any(!is.finite(proj$Surv_obs)) ||
+		any(proj$Surv_obs <= s.tol) || any(proj$Surv_obs >= 1 - s.tol)
 }
 
 Check_observations = function(Observations, nage){
@@ -51,14 +59,22 @@ Check_Designs = function(Designs,nage,proj.period){
 
 }
 
-Check_prop_var = function(prop.var,nage,proj.period){
-	if(is.null(prop.var$Fec)) prop.var$Fec = matrix(1,nrow = nage[1],ncol = proj.period)
-	if(is.null(prop.var$Surv)) prop.var$Surv = matrix(1,nrow = sum(nage),ncol = proj.period)
-	if(is.null(prop.var$SRB)) prop.var$SRB = matrix(.1,nage[1],proj.period)
-	if(is.null(prop.var$AerialDet)) prop.var$AerialDet = matrix(1,1,proj.period+1)
-	if(is.null(prop.var$Harv)) prop.var$Harv = matrix(1,sum(nage),proj.period+1)
+Check_prop_var = function(prop.var, Assumptions, Designs){
+	parameter_dims = function(name){
+		c(ncol(Designs[[name]]), ncol(Assumptions[[name]]$age))
+	}
+	if(is.null(prop.var$Fec)) prop.var$Fec = matrix(1, nrow = parameter_dims("Fec")[1], ncol = parameter_dims("Fec")[2])
+	if(is.null(prop.var$Surv)) prop.var$Surv = matrix(1, nrow = parameter_dims("Surv")[1], ncol = parameter_dims("Surv")[2])
+	if(is.null(prop.var$SRB)) prop.var$SRB = matrix(.1, nrow = parameter_dims("SRB")[1], ncol = parameter_dims("SRB")[2])
+	if(is.null(prop.var$AerialDet)) prop.var$AerialDet = matrix(1, nrow = parameter_dims("AerialDet")[1], ncol = parameter_dims("AerialDet")[2])
+	if(is.null(prop.var$Harv)) prop.var$Harv = matrix(1, nrow = parameter_dims("Harv")[1], ncol = parameter_dims("Harv")[2])
+	for(name in c("Fec", "Surv", "SRB", "AerialDet", "Harv")){
+		if(!identical(dim(as.matrix(prop.var[[name]])), parameter_dims(name))){
+			stop(sprintf("prop.vars$%s must have dimensions %d x %d.", name, parameter_dims(name)[1], parameter_dims(name)[2]))
+		}
+	}
 	if(is.null(prop.var$aK0)) prop.var$aK0 = list(5e-8,5e-8,50)
-	if(is.null(prop.var$baseline.pop.count)) prop.var$baseline.pop.count = matrix(1,nrow = sum(nage),ncol = 1)
+	if(is.null(prop.var$baseline.pop.count)) prop.var$baseline.pop.count = matrix(1, nrow = nrow(Assumptions$Harv$age), ncol = 1)
 	return(prop.var)
 }
 
@@ -634,9 +650,6 @@ analysisportion_simpleDDScheme_full = function(mcmc_obj,Assumptions = list(),nag
     class(res) = "ReCAP_Scheme_full"
     return(res)
 }
-
-
-
 
 
 

@@ -90,8 +90,10 @@ ReCAP_sampler =
 
         if(Aerialcount_time=="pre") getAerialCount=getAerialCountPre
         else getAerialCount=getAerialCountPost
-        cat("Checking input dimensions...\n\n")
-        cat("  Checking priors:\n")
+		cat("Checking input dimensions...\n\n")
+		cat("  Checking priors:\n")
+		Assumptions = Check_assumptions(Assumptions, nage, proj.periods)
+		Designs = Check_Designs(Designs,nage,proj.periods)
         if(length(prior.mean.f)!=length(prior.var.f)|
            length(prior.mean.s)!=length(prior.var.s)|
            length(prior.mean.SRB)!=length(prior.var.SRB)|
@@ -100,33 +102,26 @@ ReCAP_sampler =
            ) stop("    Make sure prior mean and var have same lenght.\n")
         cat("    all clear\n\n")
 
-        if(length(prior.mean.f) != 1 & length(prior.mean.f) != nage[1]){
-           prior.mean.f = prior.ageclass$Fec %*%  prior.mean.f
-           prior.var.f = prior.ageclass$Fec %*%  prior.var.f
-        }
-
-
-        if(length(prior.mean.s) != 1 & length(prior.mean.s) != sum(nage)){
-           prior.mean.s = prior.ageclass$Surv %*%  prior.mean.s
-           prior.var.s = prior.ageclass$Surv %*%  prior.var.s
-        }
+		check_prior_classes = function(name, prior.mean.value){
+			nclasses = ncol(Assumptions[[name]]$age)
+			if(!length(prior.mean.value) %in% c(1, nclasses)){
+				stop(sprintf("prior.mean$%s and prior.var$%s must have length 1 or %d modeled classes.", name, name, nclasses))
+			}
+		}
+		check_prior_classes("Fec", prior.mean.f)
+		check_prior_classes("Surv", prior.mean.s)
 
         if(length(prior.mean.SRB) != 1){
            stop("    SRB is assumed to have no age structure.\n")
         }
 
-        if(length(prior.mean.H) != 1 & length(prior.mean.H) != sum(nage)){
-           prior.mean.H = prior.ageclass$Harv %*%  prior.mean.H
-           prior.var.H = prior.ageclass$Harv %*%  prior.var.H
-        }
+		check_prior_classes("Harv", prior.mean.H)
 
         if(length(prior.mean.A) != 1 ){
            stop("    Aerial detection count is assumed to have no age structure.\n")
         }
 
-        Assumptions = Check_assumptions(Assumptions, nage, proj.periods)
-        prop.vars = Check_prop_var(prop.vars,nage,proj.periods)
-        Designs = Check_Designs(Designs,nage,proj.periods)
+		prop.vars = Check_prop_var(prop.vars,Assumptions,Designs)
 	prior.measurement.err = Check_prior_measurement_err(prior.measurement.err)
         start.measurement.err = Check_start_measurement_err(start.measurement.err,Assumptions$err$time)
 
@@ -151,16 +146,21 @@ ReCAP_sampler =
         start.sigmasq.s = start.measurement.err$Surv
         start.sigmasq.SRB = start.measurement.err$SRB
 
-        start.b = as.matrix(Harv.data[,1])
-        start.b[is.na(start.b)] = 5
-        start.aK0 = min.aK0
+		start.b = as.matrix(Harv.data[,1])
+		start.b[is.na(start.b)] = 5
+		start.aK0 = aK0
+		if(estaK0 && any(vapply(seq_along(start.aK0), function(i) {
+			any(start.aK0[[i]] < min.aK0[[i]]) || any(start.aK0[[i]] > max.aK0[[i]])
+		}, logical(1)))) {
+			stop("Starting aK0 values must lie within min.aK0 and max.aK0.")
+		}
 
 	al.f = prior.measurement.err$Alpha$Fec
 	be.f = prior.measurement.err$Beta$Fec
 	al.s = prior.measurement.err$Alpha$Surv
-	be.s = prior.measurement.err$Beta$Fec
+	be.s = prior.measurement.err$Beta$Surv
 	al.SRB = prior.measurement.err$Alpha$SRB
-	be.SRB = prior.measurement.err$Beta$Fec
+	be.SRB = prior.measurement.err$Beta$SRB
 
         ## -------- Begin timing ------- ##
         cat("\n")
@@ -469,10 +469,13 @@ ReCAP_sampler =
         },aK0 = curr.aK0,assump = aK0_assump)
 
 
-        curr.proj =
-                (ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
+		curr.proj =
+				(ProjectionFunction(Surv = invlogit(logit.curr.s.full), Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
+		if(invalid_projection(curr.proj, s.tol)) {
+			stop("Initial projection is invalid; check starting vital rates and density-dependence parameters.")
+		}
 
-        curr.aeri = ( getAerialCount( curr.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
+		curr.aeri = ( getAerialCount( curr.proj,A = invlogit(logit.curr.A.full),obsMat = Observations$AerialCount))
 
         log.curr.obs_f = log(getobsVitals(curr.proj$Fec_obs,curr.proj$Living[1:nage[1],],Observations$Fec))
         logit.curr.obs_s = logitf(getobsVitals(curr.proj$Surv_obs,curr.proj$Living,Observations$Surv))
@@ -584,8 +587,7 @@ ReCAP_sampler =
 
 
 
-                if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest))
-                     || is.nan(sum(full.proj$Harvest))) {
+				if(invalid_projection(full.proj, s.tol)) {
                         if(i > burn.in) {
                                 pop.negative$Fec[j] =
                                         pop.negative$Fec[j] + 1/n.iter
@@ -742,8 +744,7 @@ ReCAP_sampler =
                                 , Harvpar = invlogit(logit.curr.H.full),Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
-                        if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest))
-                             || is.nan(sum(full.proj$Harvest))) {
+						if(invalid_projection(full.proj, s.tol)) {
                                 if(i > burn.in) {
                                         pop.negative$Surv[j] =
                                                 pop.negative$Surv[j] + 1/n.iter
@@ -865,7 +866,7 @@ ReCAP_sampler =
             # - Proposal
 
             #.. cycle through components
-            for(j in 1:length(logit.curr.SRB)) {
+			for(j in seq_along(prop.vars$SRB)) {
                 prop.SRB.beta.mat =
                         matrix(0, nrow = nrow(curr.SRB.beta)
                                      ,ncol = ncol(curr.SRB.beta)) # this result depends on whether time-homo assumed.
@@ -901,8 +902,7 @@ ReCAP_sampler =
                                 , aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
-                        if(sum(full.proj$Harvest < 0) > 0 || is.na(sum(full.proj$Harvest ))
-                             || is.nan(sum(full.proj$Harvest ))) {
+						if(invalid_projection(full.proj, s.tol)) {
                                 if(i > burn.in) {
                                         pop.negative$Surv[j] =
                                                 pop.negative$Surv[j] + 1/n.iter
@@ -1028,7 +1028,7 @@ ReCAP_sampler =
                 prop.H.beta.mat =
                         matrix(0, nrow = nrow(curr.H.beta)
                                      ,ncol = ncol(curr.H.beta)) # this result depends on whether time-homo assumed.
-                prop.H.beta.mat[j] = rnorm(1, 0, sqrt(prop.vars$SRB[j]))
+				prop.H.beta.mat[j] = rnorm(1, 0, sqrt(prop.vars$Harv[j]))
 
                 #.. make proposal
                 prop.H.beta = curr.H.beta + prop.H.beta.mat
@@ -1050,8 +1050,7 @@ ReCAP_sampler =
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
-                        if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
-                             || is.nan(sum(full.proj$Harvest ))) {
+						if(invalid_projection(full.proj, s.tol)) {
                                 if(i > burn.in) {
                                         pop.negative$Surv[j] =
                                                 pop.negative$Surv[j] + 1/n.iter
@@ -1171,7 +1170,7 @@ ReCAP_sampler =
                 prop.A.beta.mat =
                         matrix(0, nrow = nrow(curr.A.beta)
                                      ,ncol = ncol(curr.A.beta)) # this result depends on whether time-homo assumed.
-                prop.A.beta.mat[j] = rnorm(1, 0, sqrt(prop.vars$SRB[j]))
+				prop.A.beta.mat[j] = rnorm(1, 0, sqrt(prop.vars$AerialDet[j]))
 
                 #.. make proposal
                 prop.A.beta = curr.A.beta + prop.A.beta.mat
@@ -1190,8 +1189,7 @@ ReCAP_sampler =
                                 ,Fec=exp(log.curr.f.full), SRB = invlogit(logit.curr.SRB.full), aK0 = (curr.aK0.full), global = global, null = null, bl = exp(log.curr.b) , period = proj.periods, nage = nage))
 
 
-                        if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
-                             || is.nan(sum(full.proj$Harvest ))) {
+						if(invalid_projection(full.proj, s.tol)) {
                                 if(i > burn.in) {
                                         pop.negative$A[j] =
                                                 pop.negative$A[j] + 1/n.iter
@@ -1321,8 +1319,7 @@ ReCAP_sampler =
                                 , global = global, null = null, bl = exp(log.curr.b)    , period = proj.periods, nage = nage))
 
 
-                     if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
-                             || is.nan(sum(full.proj$Harvest ))) {
+				     if(invalid_projection(full.proj, s.tol)) {
                                 if(i > burn.in) {
                                         pop.negative$Surv[j] =
                                                 pop.negative$Surv[j] + 1/n.iter
@@ -1475,8 +1472,7 @@ ReCAP_sampler =
                                 , period = proj.periods, nage = nage))
 
 
-            if(sum(full.proj$Harvest  < 0) > 0 || is.na(sum(full.proj$Harvest ))
-                 || is.nan(sum(full.proj$Harvest ))) {
+			if(invalid_projection(full.proj, s.tol)) {
                 if(i > burn.in) {
                     pop.negative$baseline.count[j] =
                             pop.negative$baseline.count[j] + 1/n.iter
@@ -1805,8 +1801,8 @@ ReCAP_sampler =
 
 
             ##...... Sex Ratio at Birth ......##
-            prop.sigmasq.SRB =
-                rinvGamma(proj.periods, al.SRB + length(measure.SRB)/2-sum(is.na(measure.SRB))/2,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2,na.rm = T))
+			prop.sigmasq.SRB =
+				rinvGamma(length(start.sigmasq.SRB), al.SRB + length(measure.SRB)/2-sum(is.na(measure.SRB))/2,be.SRB + 0.5*sum((logit.curr.SRB - logit.measure.SRB)^2,na.rm = T))
             prop.sigmasq.SRB = matrix(prop.sigmasq.SRB,nrow(start.sigmasq.SRB),ncol(start.sigmasq.SRB))
             prop.sigmasq.SRB.full = prop.sigmasq.SRB %*% Assumptions$err$time
                 # - Calculate log posterior of proposed vital under projection
@@ -1897,8 +1893,8 @@ ReCAP_sampler =
                         #.. if accept, update current, store proposed
                         #     and count acceptance
                         if(runif(1) <= ar) {
-                                if(i > burn.in) acc.count$sigmasq.SRB =
-                                        acc.count$sigmasq.s + 1/n.iter
+						if(i > burn.in) acc.count$sigmasq.SRB =
+								acc.count$sigmasq.SRB + 1/n.iter
                                 curr.sigmasq.SRB = prop.sigmasq.SRB
                                 curr.sigmasq.SRB.full = prop.sigmasq.SRB.full
                                 log.curr.posterior = log.prop.posterior

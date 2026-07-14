@@ -121,8 +121,8 @@ Rcpp::List ProjectAllCpp(const arma::mat& Surv,
 	return(Rcpp::List::create(
 	        Rcpp::Named("Harvest") = Harvest ,
 	        Rcpp::Named("Living") = Living-Harvest,
-		  	Rcpp::Named("Fec_obs") = Fec,
-		    Rcpp::Named("Surv_obs") = Surv
+	        Rcpp::Named("Fec_obs") = Fecobs,
+	        Rcpp::Named("Surv_obs") = Survobs
 	));//
 }
 
@@ -566,8 +566,6 @@ List get_hypo_harvest_portion_simpleDD_fullrec_Cpp(const arma::mat& bl,
 
     return(results);
 }
-
-
 
 
 
