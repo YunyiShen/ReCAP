@@ -16,33 +16,32 @@ age_display_order <- c(
 )
 
 ## Age-specific harvest rates
-mean_harvest <- matrix(
-  apply(Chicago_RES$mcmc.objs$H.mcmc, 2, mean),
+harvest_rate_draws <- plogis(as.matrix(Chicago_RES$mcmc.objs$H.mcmc))
+median_harvest <- matrix(
+  apply(harvest_rate_draws, 2, median),
   ncol = period,
   byrow = TRUE
 )
 low_harvest <- matrix(
-  apply(Chicago_RES$mcmc.objs$H.mcmc, 2, quantile, probs = 0.025),
+  apply(harvest_rate_draws, 2, quantile, probs = 0.025),
   ncol = period,
   byrow = TRUE
 )
 high_harvest <- matrix(
-  apply(Chicago_RES$mcmc.objs$H.mcmc, 2, quantile, probs = 0.975),
+  apply(harvest_rate_draws, 2, quantile, probs = 0.975),
   ncol = period,
   byrow = TRUE
 )
 
 all_summary <- do.call(rbind, lapply(seq_along(age_code), function(i) {
   data.frame(
-    harvest.rate = mean_harvest[i, ],
+    harvest.rate = median_harvest[i, ],
     low = low_harvest[i, ],
     high = high_harvest[i, ],
     Year = 1992:2008,
     group = age_code[i]
   )
 }))
-all_summary[, c("harvest.rate", "low", "high")] <-
-  1 / (1 + exp(-all_summary[, c("harvest.rate", "low", "high")]))
 all_summary$group <- factor(all_summary$group, levels = age_display_order)
 all_summary <- all_summary[order(all_summary$group, all_summary$Year), ]
 
@@ -82,7 +81,7 @@ for (i in seq_len(n_draws)) {
 
 lambda_val <- data.frame(
   Year = 1993:2008,
-  lambda = apply(lambda_mcmc, 2, mean),
+  lambda = apply(lambda_mcmc, 2, median),
   lambda.low = apply(lambda_mcmc, 2, quantile, probs = 0.025),
   lambda.high = apply(lambda_mcmc, 2, quantile, probs = 0.975)
 )
@@ -154,7 +153,7 @@ for (i in seq_len(n_draws)) {
 
 overall_harvest <- data.frame(
   Year = 1992:2008,
-  harvest.rate = apply(overall_harvest_mcmc, 2, mean),
+  harvest.rate = apply(overall_harvest_mcmc, 2, median),
   Hall.low = apply(overall_harvest_mcmc, 2, quantile, probs = 0.025),
   Hall.high = apply(overall_harvest_mcmc, 2, quantile, probs = 0.975)
 )

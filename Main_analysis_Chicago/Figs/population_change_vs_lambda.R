@@ -7,7 +7,7 @@ summarize_change <- function(samples, group) {
   data.frame(
     group = group,
     Year = 1993:2008,
-    pop_mean = rowMeans(samples),
+    pop_median = apply(samples, 1, median),
     pop_CI_low = apply(samples, 1, quantile, probs = 0.025),
     pop_CI_high = apply(samples, 1, quantile, probs = 0.975)
   )
@@ -46,7 +46,7 @@ for (name in names(changes)) {
 }
 
 make_change_time_plot <- function(data, y_label) {
-  ggplot(data, aes(x = Year, y = pop_mean)) +
+  ggplot(data, aes(x = Year, y = pop_median)) +
     geom_line() +
     geom_point() +
     geom_errorbar(
@@ -112,7 +112,7 @@ harvest_change_data$Year <- factor(harvest_change_data$Year)
 
 harvest_change_plot <- ggplot(
   harvest_change_data,
-  aes(x = harvest.rate, y = pop_mean)
+  aes(x = harvest.rate, y = pop_median)
 ) +
   geom_smooth(method = lm, linewidth = 0.5, colour = "gray10", se = TRUE) +
   geom_point(aes(colour = Year)) +
@@ -152,7 +152,7 @@ overall_harvest_change$population_group <- NULL
 
 overall_harvest_change_plot <- ggplot(
   overall_harvest_change,
-  aes(x = harvest.rate, y = pop_mean)
+  aes(x = harvest.rate, y = pop_median)
 ) +
   geom_smooth(method = lm, linewidth = 0.5, colour = "gray10", se = TRUE) +
   geom_point(aes(colour = Year)) +

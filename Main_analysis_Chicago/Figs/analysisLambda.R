@@ -20,7 +20,7 @@ summarize_scenarios <- function(results) {
 
     data.frame(
       point = names(scenario_rows)[[i]],
-      lambda = rowMeans(samples),
+      lambda = apply(samples, 1, median),
       low = apply(samples, 1, quantile, probs = 0.025),
       high = apply(samples, 1, quantile, probs = 0.975),
       year = years

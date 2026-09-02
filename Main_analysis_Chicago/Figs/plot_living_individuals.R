@@ -4,7 +4,7 @@ generate_plot_data <- function(w, group, year = 1:17+1991){
   
   data.frame(
     group = group, year = year,
-    mean = rowMeans(w),
+    median = apply(w, 1, median),
     CI_low = CI_low,
     CI_high = CI_high
   )
@@ -58,12 +58,14 @@ aerial_det <- generate_plot_data(t(sigmoid(Chicago_RES$mcmc.objs$aerial.detectio
 
 plot_data <- rbind(fawns, females, males)
 write.csv(plot_data, "./monograph_figs/postcull_population/post_cull_population.csv", row.names = F)
+# Retain the existing no-underscore filename as a compatibility copy.
+write.csv(plot_data, "./monograph_figs/postcull_population/postcull_population.csv", row.names = F)
 write.csv(total,"./monograph_figs/postcull_population/total_post_cull.csv", row.names = F)
 write.csv(ratio_data,"./monograph_figs/postcull_population/post_cull_population_ratio.csv", row.names = F)
 write.csv(aerial_det,"./monograph_figs/vital_rates/aerial_detection.csv", row.names = F)
 
 library(ggplot2)
-postcull_population_plot <- ggplot(plot_data, aes(x = year, y = mean, shape = group, lty = group))+
+postcull_population_plot <- ggplot(plot_data, aes(x = year, y = median, shape = group, lty = group))+
   geom_point() + 
   geom_line() + 
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high), linewidth = .5, width = 0.3)+
@@ -72,7 +74,7 @@ postcull_population_plot <- ggplot(plot_data, aes(x = year, y = mean, shape = gr
 ggsave("./monograph_figs/postcull_population/postcull_population.pdf", plot = postcull_population_plot, width = 6, height = 3.5, scale = .9)
 
 library(ggplot2)
-postcull_total_plot <- ggplot(total, aes(x = year, y = mean))+
+postcull_total_plot <- ggplot(total, aes(x = year, y = median))+
   geom_point() + 
   geom_line() + 
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high), linewidth = .5, width = 0.3)+
@@ -81,7 +83,7 @@ postcull_total_plot <- ggplot(total, aes(x = year, y = mean))+
   theme_classic() 
 ggsave("./monograph_figs/postcull_population/postcull_all.pdf", plot = postcull_total_plot, width = 6, height = 3.5, scale = .9)
 
-postcull_ratio_plot <- ggplot(ratio_data, aes(x = year, y = mean, shape = group, lty = group))+
+postcull_ratio_plot <- ggplot(ratio_data, aes(x = year, y = median, shape = group, lty = group))+
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high), linewidth = .5, width = 0.3)+
@@ -90,7 +92,7 @@ postcull_ratio_plot <- ggplot(ratio_data, aes(x = year, y = mean, shape = group,
 ggsave("./monograph_figs/postcull_population/postcull_population_ratio.pdf", plot = postcull_ratio_plot, width = 6, height = 3.5, scale = .9)
 
 
-ggplot(aerial_det, aes(x = year, y = mean))+
+ggplot(aerial_det, aes(x = year, y = median))+
   geom_point() + 
   geom_line() + 
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high), linewidth = .5, width = 0.3)+
@@ -123,7 +125,7 @@ plot_data <- lapply(1:4, function(i, thenames,mats){
 
 write.csv(plot_data,"./monograph_figs/vital_rates/non-harvest-survival.csv", row.names = F)
 
-ggplot(plot_data, aes(x = year, y = mean))+
+ggplot(plot_data, aes(x = year, y = median))+
   geom_point(size = 2) + 
   geom_line() + 
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high), linewidth = .5, width = 0.3)+
