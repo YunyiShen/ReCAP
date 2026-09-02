@@ -1,123 +1,207 @@
 require(ggplot2)
-# Just for plotting things
-period = 17
 
-## Harvest prediction
-mean.harv = apply(Chicago_RES$mcmc.objs$H.mcmc,2,mean)
-mean.harv.matrix = matrix(mean.harv,ncol = period, byrow=T)
-mean.harv.mean = data.frame(age = c(paste0("F",1:3),paste0("M",1:3)), mean.harv.matrix)
+output_dir <- "./monograph_figs/harvest_vs_lambda"
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-BI.low.harv = apply(Chicago_RES$mcmc.objs$H.mcmc,2,quantile,probs = .025)
-BI.low.harv.matrix = matrix(BI.low.harv,ncol = period, byrow = T)
-BI_harv_low = data.frame(age = c(paste0("F",1:3),paste0("M",1:3)),BI.low.harv.matrix)
+period <- 17
+n_draws <- nrow(Chicago_RES$mcmc.objs$living.mcmc)
+age_code <- c(
+  "Female.Fawn", "Female.Yearling", "Female.Adult",
+  "Male.Fawn", "Male.Yearling", "Male.Adult"
+)
+age_display_order <- c(
+  "Female.Fawn", "Male.Fawn",
+  "Female.Yearling", "Male.Yearling",
+  "Female.Adult", "Male.Adult"
+)
 
+## Age-specific harvest rates
+mean_harvest <- matrix(
+  apply(Chicago_RES$mcmc.objs$H.mcmc, 2, mean),
+  ncol = period,
+  byrow = TRUE
+)
+low_harvest <- matrix(
+  apply(Chicago_RES$mcmc.objs$H.mcmc, 2, quantile, probs = 0.025),
+  ncol = period,
+  byrow = TRUE
+)
+high_harvest <- matrix(
+  apply(Chicago_RES$mcmc.objs$H.mcmc, 2, quantile, probs = 0.975),
+  ncol = period,
+  byrow = TRUE
+)
 
-BI.high.harv = apply(Chicago_RES$mcmc.objs$H.mcmc,2,quantile,probs = .975)
-BI.high.harv.matrix = matrix(BI.high.harv,ncol = period, byrow = T)
-BI_harv_high = data.frame(age = c(paste0("F",1:3),paste0("M",1:3)),BI.high.harv.matrix)
+all_summary <- do.call(rbind, lapply(seq_along(age_code), function(i) {
+  data.frame(
+    harvest.rate = mean_harvest[i, ],
+    low = low_harvest[i, ],
+    high = high_harvest[i, ],
+    Year = 1992:2008,
+    group = age_code[i]
+  )
+}))
+all_summary[, c("harvest.rate", "low", "high")] <-
+  1 / (1 + exp(-all_summary[, c("harvest.rate", "low", "high")]))
+all_summary$group <- factor(all_summary$group, levels = age_display_order)
+all_summary <- all_summary[order(all_summary$group, all_summary$Year), ]
 
-har_data = data.frame(matrix(nrow = 1,ncol = 5))
-colnames(har_data) = c("age","mean","low","high","time")
-har_data = har_data[-1,]
+harvest_plot <- ggplot(
+  all_summary,
+  aes(x = Year, y = harvest.rate, colour = group)
+) +
+  geom_line() +
+  geom_errorbar(aes(ymin = low, ymax = high), linewidth = 0.2) +
+  labs(x = "Year", y = "Harvest rate", colour = "Age group") +
+  theme_classic()
 
-age_code <- c("Female.Fawn","Female.Yearling","Female.Adult","Male.Fawn","Male.Yearling","Male.Adult")
+ggsave(
+  file.path(output_dir, "harv_porp.pdf"),
+  plot = harvest_plot,
+  width = 10,
+  height = 6,
+  scale = 0.8
+)
+write.csv(
+  all_summary,
+  file.path(output_dir, "harvest_porp.csv"),
+  row.names = FALSE
+)
 
-require(ggplot2)
-
-all_summary = data.frame(harvest.rate = mean.harv.matrix[1,],low = BI.low.harv.matrix[1,],high = BI.high.harv.matrix[1,],time = 1992:2008, group = age_code[1])
-
-
-for(i in 2:6){
-  temp1 = data.frame(harvest.rate  = mean.harv.matrix[i,],low = BI.low.harv.matrix[i,],high = BI.high.harv.matrix[i,],time = 1992:2008, group = age_code[i])
-  all_summary <- rbind(temp1,all_summary)
+## Annual population growth rate
+lambda_mcmc <- matrix(NA_real_, nrow = n_draws, ncol = period - 1)
+for (i in seq_len(n_draws)) {
+  living <- matrix(
+    Chicago_RES$mcmc.objs$living.mcmc[i, ],
+    ncol = period,
+    byrow = FALSE
+  )
+  total_living <- colSums(living)
+  lambda_mcmc[i, ] <- total_living[-1] / total_living[-period]
 }
 
-all_summary[,1:3] <- 1/(1+exp(-all_summary[,1:3]))
+lambda_val <- data.frame(
+  Year = 1993:2008,
+  lambda = apply(lambda_mcmc, 2, mean),
+  lambda.low = apply(lambda_mcmc, 2, quantile, probs = 0.025),
+  lambda.high = apply(lambda_mcmc, 2, quantile, probs = 0.975)
+)
+write.csv(
+  lambda_val,
+  file.path(output_dir, "lambda_summary.csv"),
+  row.names = FALSE
+)
 
-ggplot(data = all_summary, aes(x=time,y=harvest.rate,col = group))+
-  geom_line()+
-  geom_errorbar(aes(ymin = low, ymax = high),size = .2)
+rate_lambda_data <- merge(
+  all_summary[all_summary$Year != 1992, ],
+  lambda_val,
+  by = "Year",
+  sort = TRUE
+)
+rate_lambda_data$group <- factor(
+  rate_lambda_data$group,
+  levels = age_display_order
+)
 
-ggsave("./harv_porp.pdf",width = 10,height = 6, scale = .8)
+rate_lambda_plot <- ggplot(
+  rate_lambda_data,
+  aes(x = harvest.rate, y = lambda)
+) +
+  geom_point() +
+  geom_errorbar(
+    aes(ymin = lambda.low, ymax = lambda.high),
+    width = 0.01,
+    linewidth = 0.2
+  ) +
+  geom_errorbar(
+    aes(xmin = low, xmax = high),
+    orientation = "y",
+    width = 0.01,
+    linewidth = 0.2
+  ) +
+  geom_hline(yintercept = 1, colour = "gray30", linetype = 2) +
+  facet_wrap(~group, ncol = 2) +
+  coord_cartesian(xlim = c(0, 0.9), ylim = c(0.3, 1.5)) +
+  labs(x = "Harvest rate", y = "Annual growth rate (lambda)") +
+  theme_classic()
 
-write.csv(all_summary,"harvest_porp.csv",row.names = F)
+ggsave(
+  file.path(output_dir, "rate_vs_lambda.pdf"),
+  plot = rate_lambda_plot,
+  width = 12,
+  height = 8,
+  scale = 0.8
+)
 
-
-## now calculate overall lambda:
-
-lambda_MCMC <- matrix(NA, nrow = 2000, ncol = period-1)
-for(i in 1:2000){
-  temp <- matrix(Chicago_RES$mcmc.objs$living.mcmc[i,], ncol = period, byrow = F)
-  temp <- colSums(temp)
-  lambda_MCMC[i,] <- temp[-1]/temp[-period]
+## Overall harvest rate
+overall_harvest_mcmc <- matrix(NA_real_, nrow = n_draws, ncol = period)
+for (i in seq_len(n_draws)) {
+  living <- matrix(
+    Chicago_RES$mcmc.objs$living.mcmc[i, ],
+    ncol = period,
+    byrow = FALSE
+  )
+  harvested <- matrix(
+    Chicago_RES$mcmc.objs$harvest.mcmc[i, ],
+    ncol = period,
+    byrow = FALSE
+  )
+  total_living <- colSums(living)
+  total_harvested <- colSums(harvested)
+  overall_harvest_mcmc[i, ] <-
+    total_harvested / (total_living + total_harvested)
 }
 
+overall_harvest <- data.frame(
+  Year = 1992:2008,
+  harvest.rate = apply(overall_harvest_mcmc, 2, mean),
+  Hall.low = apply(overall_harvest_mcmc, 2, quantile, probs = 0.025),
+  Hall.high = apply(overall_harvest_mcmc, 2, quantile, probs = 0.975)
+)
+write.csv(
+  overall_harvest,
+  file.path(output_dir, "harvest_rate_overall.csv"),
+  row.names = FALSE
+)
 
-mean.lambda = apply(lambda_MCMC,2,mean)
-BI.low.lambda = apply(lambda_MCMC,2,quantile,probs = .025)
-BI.high.lambda = apply(lambda_MCMC,2,quantile,probs = .975)
+overall_lambda_data <- merge(
+  overall_harvest[overall_harvest$Year != 1992, ],
+  lambda_val,
+  by = "Year",
+  sort = TRUE
+)
+overall_lambda_data$Year <- factor(overall_lambda_data$Year)
 
-lambda_val <- data.frame(year = 1993:2008, lambda = mean.lambda, lambda.low = BI.low.lambda, lambda.high = BI.high.lambda)
-write.csv(lambda_val, "lambda_summary.csv",row.names = F)
-lambda_val <- read.csv("lambda_summary.csv")
+overall_lambda_plot <- ggplot(
+  overall_lambda_data,
+  aes(x = harvest.rate, y = lambda)
+) +
+  geom_smooth(method = lm, linewidth = 0.5, colour = "gray10", se = TRUE) +
+  geom_point(aes(colour = Year)) +
+  geom_errorbar(
+    aes(ymin = lambda.low, ymax = lambda.high),
+    width = 0.01,
+    linewidth = 0.2
+  ) +
+  geom_errorbar(
+    aes(xmin = Hall.low, xmax = Hall.high),
+    orientation = "y",
+    width = 0.01,
+    linewidth = 0.3
+  ) +
+  geom_hline(yintercept = 1, colour = "gray30", linetype = 2) +
+  coord_cartesian(xlim = c(0.12, 0.8), ylim = c(0.3, 1.7)) +
+  labs(
+    x = "Harvest rate",
+    y = "Annual growth rate (lambda)",
+    colour = "Year"
+  ) +
+  theme_classic()
 
-pp <- list()
-
-for(i in 1:6){
-  temp <- all_summary[all_summary$group==age_code[i],]
-  temp <- temp[temp$time!=1992,]
-  temp <- cbind(temp,lambda_val)
-  pp_temp <- ggplot(data = temp, aes(x=harvest.rate,y=lambda))+
-    geom_point()+
-    geom_errorbar(aes(xmin=low,xmax = high, ymin = lambda.low,ymax = lambda.high),size = 0.2)+
-    geom_errorbarh(aes(xmin=low,xmax = high),size = 0.2)+
-    xlim(0,.9)+
-    ylim(0.3,1.5)+
-    #geom_smooth(method=lm) +
-    geom_hline(yintercept = 1,col = "red", linetype = 2)#+
-    #xlab(age_code[i])
-  pp[[i]] <- pp_temp
-}
-
-ggpubr::ggarrange(plotlist = pp, labels =age_code, label.x = 0.1,align = "hv")
-
-ggsave("./rate_vs_lambda.pdf",width = 12, height = 8, scale = .8)
-
-H_all_MCMC <- matrix(NA, nrow = 2000, ncol = period)
-for(i in 1:2000){
-  temp_living <- matrix(Chicago_RES$mcmc.objs$living.mcmc[i,], ncol = period, byrow = F)
-  temp_harving <- matrix(Chicago_RES$mcmc.objs$harvest.mcmc[i,], ncol = period, byrow = F)
-  temp_living <- colSums(temp_living)
-  temp_harving <- colSums(temp_harving)
-  H_all_MCMC[i,] <- temp_harving/(temp_living+temp_harving)
-}
-
-mean.Hall = apply(H_all_MCMC ,2,mean)
-BI.low.Hall = apply(H_all_MCMC ,2,quantile,probs = .025)
-BI.high.Hall = apply(H_all_MCMC ,2,quantile,probs = .975)
-
-Hall_val <- data.frame(year = 1992:2008, harvest.rate = mean.Hall, Hall.low = BI.low.Hall, Hall.high = BI.high.Hall)
-
-write.csv(Hall_val,"harvest_rate_overall.csv",row.names = F)
-Hall_val <- read.csv("harvest_rate_overall.csv")
-
-hallvslambda <- cbind(Hall_val[Hall_val$year!=1992,-1], lambda_val)
-
-hallvslambda$year <- as.factor(hallvslambda$year)
-ggplot(data = hallvslambda, aes(x=harvest.rate,y=lambda))+
-  geom_smooth(method=lm, size = .5, col = "gray10") +
-  geom_point(aes(col = year))+
-  #scale_color_grey()+
-  #geom_point()+
-  geom_errorbar(aes(xmin=Hall.low,xmax = Hall.high, ymin = lambda.low,ymax = lambda.high),size = 0.2)+
-  geom_errorbarh(aes(xmin=Hall.low,xmax = Hall.high),size = 0.3)+
-  xlim(0.12,.8)+
-  ylim(0.3,1.7)+
-  xlab("Harvest rate")+
-  ylab("Annual growth rate (lambda)")+
-  geom_hline(yintercept = 1,col = "gray30", linetype = 2) +
-  theme_classic()+
-  theme(panel.background = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank())
-ggsave("./rate_overall_vs_lambda1.pdf", width = 8, height = 5.5, scale = 0.8)
+ggsave(
+  file.path(output_dir, "rate_overall_vs_lambda1.pdf"),
+  plot = overall_lambda_plot,
+  width = 8,
+  height = 5.5,
+  scale = 0.8
+)

@@ -1,81 +1,185 @@
-generate_plot_data <- function(w, group, year = 1:17+1991){
-  CI_low <- apply(w, 1, quantile, 0.025)
-  CI_high <- apply(w, 1, quantile, 0.975)
+require(ggplot2)
 
+output_dir <- "./monograph_figs/harvest_vs_change"
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+summarize_change <- function(samples, group) {
   data.frame(
-    group = group, year = year,
-    pop_mean = rowMeans(w),
-    pop_CI_low = CI_low,
-    pop_CI_high = CI_high
+    group = group,
+    Year = 1993:2008,
+    pop_mean = rowMeans(samples),
+    pop_CI_low = apply(samples, 1, quantile, probs = 0.025),
+    pop_CI_high = apply(samples, 1, quantile, probs = 0.975)
   )
 }
 
-living_matrix <- lapply(1:2000, function(i, living_mcmc){
-  matrix(living_mcmc[i,], nrow = 11)
-}, Chicago_RES$mcmc.objs$living.mcmc)
-
-males <- sapply(living_matrix, function(w){
-  temp <- t(colSums(w[10:11,]))
-  temp[-1]-temp[-length(temp)]
+n_draws <- nrow(Chicago_RES$mcmc.objs$living.mcmc)
+living_matrices <- lapply(seq_len(n_draws), function(i) {
+  matrix(Chicago_RES$mcmc.objs$living.mcmc[i, ], nrow = sum(nage))
 })
 
-females <- sapply(living_matrix, function(w){
-  temp <- t(colSums(w[2:8,]))
-  temp[-1]-temp[-length(temp)]
-})
+annual_change <- function(rows) {
+  sapply(living_matrices, function(living) {
+    totals <- colSums(living[rows, , drop = FALSE])
+    totals[-1] - totals[-length(totals)]
+  })
+}
 
-fawns <- sapply(living_matrix, function(w){
-  temp <- t(colSums(w[c(1,9),]))
-  temp[-1]-temp[-length(temp)]
-})
+fawns <- summarize_change(annual_change(c(1, 9)), "fawn")
+females <- summarize_change(annual_change(2:8), "female")
+males <- summarize_change(annual_change(10:11), "male")
+overall <- summarize_change(annual_change(seq_len(sum(nage))), "overall")
 
-overall <- sapply(living_matrix, function(w){
-  temp <- t(colSums(w))
-  temp[-1]-temp[-length(temp)]
-})
+changes <- list(
+  fawns = fawns,
+  females = females,
+  males = males,
+  overall = overall
+)
 
+for (name in names(changes)) {
+  write.csv(
+    changes[[name]],
+    file.path(output_dir, paste0(sub("s$", "", name), "_changes.csv")),
+    row.names = FALSE
+  )
+}
 
-fawns <- generate_plot_data(fawns, "fawn",year = 2:17+1991)
-females <- generate_plot_data(females, "female",year = 2:17+1991)
-males <- generate_plot_data(males, "male",year = 2:17+1991)
-overall <- generate_plot_data(overall, "overall",year = 2:17+1991)
+make_change_time_plot <- function(data, y_label) {
+  ggplot(data, aes(x = Year, y = pop_mean)) +
+    geom_line() +
+    geom_point() +
+    geom_errorbar(
+      aes(ymin = pop_CI_low, ymax = pop_CI_high),
+      width = 0.3,
+      linewidth = 0.4
+    ) +
+    geom_hline(yintercept = 0, colour = "gray30", linetype = 2) +
+    labs(x = "Year", y = y_label) +
+    theme_classic()
+}
 
-changes <- list(fawns, females, males, overall)
-names(changes) <- c("fawns", "females", "males","all")
-write.csv(fawns,"fawn_changes.csv", row.names = F)
-write.csv(females,"female_changes.csv", row.names = F)
-write.csv(males,"male_changes.csv", row.names = F)
-write.csv(overall,"overall_changes.csv", row.names = F)
+female_change_plot <- make_change_time_plot(
+  females,
+  "Net change of females"
+)
+overall_change_plot <- make_change_time_plot(
+  overall,
+  "Net change of overall population"
+)
 
-harvest_overall <- read.csv("./monograph_figs/harvest_vs_lambda/harvest_rate_overall.csv")[-1,]
+ggsave(
+  file.path(output_dir, "female_changes.pdf"),
+  plot = female_change_plot,
+  width = 8,
+  height = 5.5,
+  scale = 0.8
+)
+ggsave(
+  file.path(output_dir, "overall_changes.pdf"),
+  plot = overall_change_plot,
+  width = 8,
+  height = 5.5,
+  scale = 0.8
+)
 
-library(ggplot2)
-library(ggpubr)
-plotsss <- lapply(1:4, function(i,changes, harvest_overall){
-  popchange <- changes[[i]]
-  thename <- names(changes)[i]
-  hallvschange <- cbind(harvest_overall, popchange[,-c(1:2)])
-  hallvschange$year <- as.factor(hallvschange$year)
-  ggplot(data = hallvschange, aes(x=harvest.rate,y=pop_mean))+
-    geom_smooth(method=lm, size = .5, col = "gray10") +
-    geom_point(aes(col = year))+
-    #scale_color_grey()+
-    #geom_point()+
-    geom_errorbar(aes(xmin=Hall.low,xmax = Hall.high, ymin = pop_CI_low,ymax = pop_CI_high),size = 0.2)+
-    geom_errorbarh(aes(xmin=Hall.low,xmax = Hall.high),size = 0.3)+
-    xlim(0.12,.8)+
-    #ylim(0.3,1.7)+
-    xlab("Harvest rate")+
-    ylab(paste("Net change of",thename))+
-    geom_hline(yintercept = 1,col = "gray30", linetype = 2) +
-    theme_classic()+
-    theme(panel.background = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.grid.major = element_blank())
-}, changes, harvest_overall)
+harvest_overall <- read.csv(
+  "./monograph_figs/harvest_vs_lambda/harvest_rate_overall.csv",
+  check.names = FALSE
+)
 
-ggarrange(plotlist = plotsss, nrow = 2,ncol = 2, labels = "AUTO", legend = "right", common.legend = T)
-ggsave("./harvest_rate_vs_change.pdf", width = 15, height = 9, scale = 0.8)
+change_labels <- c(
+  fawns = "fawns",
+  females = "females",
+  males = "males",
+  overall = "overall population"
+)
+harvest_change_data <- do.call(rbind, lapply(names(changes), function(name) {
+  result <- merge(
+    harvest_overall[harvest_overall$Year != 1992, ],
+    changes[[name]],
+    by = "Year",
+    sort = TRUE
+  )
+  result$population_group <- change_labels[[name]]
+  result
+}))
+harvest_change_data$population_group <- factor(
+  harvest_change_data$population_group,
+  levels = unname(change_labels)
+)
+harvest_change_data$Year <- factor(harvest_change_data$Year)
 
-plotsss[[4]]
-ggsave("./harvest_rate_vs_overallchange.pdf", width = 8, height = 5.5, scale = 0.8)
+harvest_change_plot <- ggplot(
+  harvest_change_data,
+  aes(x = harvest.rate, y = pop_mean)
+) +
+  geom_smooth(method = lm, linewidth = 0.5, colour = "gray10", se = TRUE) +
+  geom_point(aes(colour = Year)) +
+  geom_errorbar(
+    aes(ymin = pop_CI_low, ymax = pop_CI_high),
+    width = 0.01,
+    linewidth = 0.2
+  ) +
+  geom_errorbar(
+    aes(xmin = Hall.low, xmax = Hall.high),
+    orientation = "y",
+    width = 0.01,
+    linewidth = 0.3
+  ) +
+  geom_hline(yintercept = 0, colour = "gray30", linetype = 2) +
+  facet_wrap(~population_group, nrow = 2, ncol = 2) +
+  coord_cartesian(xlim = c(0.12, 0.8)) +
+  labs(
+    x = "Harvest rate",
+    y = "Net population change",
+    colour = "Year"
+  ) +
+  theme_classic()
+
+ggsave(
+  file.path(output_dir, "harvest_rate_vs_change.pdf"),
+  plot = harvest_change_plot,
+  width = 15,
+  height = 9,
+  scale = 0.8
+)
+
+overall_harvest_change <- harvest_change_data[
+  harvest_change_data$population_group == "overall population",
+]
+overall_harvest_change$population_group <- NULL
+
+overall_harvest_change_plot <- ggplot(
+  overall_harvest_change,
+  aes(x = harvest.rate, y = pop_mean)
+) +
+  geom_smooth(method = lm, linewidth = 0.5, colour = "gray10", se = TRUE) +
+  geom_point(aes(colour = Year)) +
+  geom_errorbar(
+    aes(ymin = pop_CI_low, ymax = pop_CI_high),
+    width = 0.01,
+    linewidth = 0.2
+  ) +
+  geom_errorbar(
+    aes(xmin = Hall.low, xmax = Hall.high),
+    orientation = "y",
+    width = 0.01,
+    linewidth = 0.3
+  ) +
+  geom_hline(yintercept = 0, colour = "gray30", linetype = 2) +
+  coord_cartesian(xlim = c(0.12, 0.8)) +
+  labs(
+    x = "Harvest rate",
+    y = "Net change of overall population",
+    colour = "Year"
+  ) +
+  theme_classic()
+
+ggsave(
+  file.path(output_dir, "harvest_rate_vs_overallchange.pdf"),
+  plot = overall_harvest_change_plot,
+  width = 8,
+  height = 5.5,
+  scale = 0.8
+)

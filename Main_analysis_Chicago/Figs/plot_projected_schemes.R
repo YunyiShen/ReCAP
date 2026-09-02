@@ -31,7 +31,7 @@ for(i in 1:4){
 }
 
 ggarrange(plotlist = pop_fig, ncol = 2, nrow = 2, labels = "AUTO")
-ggsave("4_schemes_population.pdf", width = 12,height=8, scale = .7)
+ggsave("./monograph_figs/simulated_schemes/4_schemes_population.pdf", width = 12,height=8, scale = .7)
 
 ggarrange(plotlist = goal_fig, ncol = 2, nrow = 2, labels = "AUTO")
-ggsave("4_schemes_goal.pdf", width = 12,height=8, scale = .7)
+ggsave("./monograph_figs/simulated_schemes/4_schemes_goal.pdf", width = 12,height=8, scale = .7)

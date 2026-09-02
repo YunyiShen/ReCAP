@@ -1,55 +1,78 @@
-analyisoflambda =
-  ReCAP::analysisLambda(Chicago_RES$mcmc.objs,Assumptions,nage,16)
-  #ReCAP::analysisRecruitment(Chicago_RES$mcmc.objs,Assumptions,nage,16)
-mean_lambda = Reduce("+",analyisoflambda)/nrow(Chicago_RES$mcmc.objs$survival.mcmc)
-
-list_each_lambda = lapply(1:length(mean_lambda),function(i,analyisoflambda){
-  temp = lapply(analyisoflambda,function(ana,i){ana[i]},i)
-  Reduce(rbind,temp)
-},analyisoflambda)
-
-lower_025 = sapply(list_each_lambda,quantile,probs = .025)
-lower_025 = matrix(lower_025,ncol=16)
-
-higher_975 = sapply(list_each_lambda,quantile,probs = .975)
-higher_975 = matrix(higher_975,ncol=16)
-
-year = 1:16+1992
-
-observed = data.frame(point = "observed (w/ culling)"
-                      ,lambda=mean_lambda[6,]
-                      ,low = lower_025[6,]
-                      ,high = higher_975[6,]
-                      ,year = year)
-even = data.frame(point = "uniform age structure"
-                      ,lambda=mean_lambda[2,]
-                      ,low = lower_025[2,]
-                      ,high = higher_975[2,]
-                      ,year = year)
-nocull = data.frame(point = "skip culling"
-                      ,lambda=mean_lambda[4,]
-                      ,low = lower_025[4,]
-                      ,high = higher_975[4,]
-                      ,year = year)
-stable = data.frame(point = "stable age structure"
-                    ,lambda=mean_lambda[3,]
-                    ,low = lower_025[3,]
-                    ,high = higher_975[3,]
-                    ,year = year)
-
-plot_data = rbind(observed,even,nocull,stable)
-
 require(ggplot2)
 
-ggplot(data = plot_data,aes(x=year,y=lambda,shape=point, lty = point))+
-  geom_line()+
-  geom_point() +
-  geom_errorbar(aes(ymin=low, ymax=high), width=.1) +
-  labs(y = "Lambda", x = "Year")+
-  #labs(y = "Net population change", x = "Year")+
-  geom_hline(yintercept = 1, col = "gray30", lty = 2)+
-  #theme(legend.position = "top")+
-  theme_classic()
+output_dir <- "./monograph_figs/one_year_growth"
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-write.csv(plot_data,"one_year_lambda.csv", row.names = F)
-ggsave("./one_year_lambda.pdf", plot = last_plot(), width = 6, height = 3.5, scale = 1)
+summarize_scenarios <- function(results) {
+  scenario_rows <- c(
+    "observed (w/ culling)" = 6,
+    "uniform age structure" = 2,
+    "stable age structure" = 3
+  )
+  years <- seq_len(ncol(results[[1]])) + 1992
+
+  do.call(rbind, lapply(seq_along(scenario_rows), function(i) {
+    samples <- vapply(
+      results,
+      function(result) result[scenario_rows[[i]], ],
+      numeric(length(years))
+    )
+
+    data.frame(
+      point = names(scenario_rows)[[i]],
+      lambda = rowMeans(samples),
+      low = apply(samples, 1, quantile, probs = 0.025),
+      high = apply(samples, 1, quantile, probs = 0.975),
+      year = years
+    )
+  }))
+}
+
+make_growth_plot <- function(plot_data, y_label, reference_value) {
+  ggplot(plot_data, aes(x = year, y = lambda, shape = point, linetype = point)) +
+    geom_line() +
+    geom_point() +
+    geom_errorbar(aes(ymin = low, ymax = high), width = 0.1) +
+    geom_hline(yintercept = reference_value, colour = "gray30", linetype = 2) +
+    labs(y = y_label, x = "Year") +
+    theme_classic()
+}
+
+# Exclude the "skip culling" scenario from both one-year-growth outputs.
+lambda_results <- ReCAP::analysisLambda(
+  Chicago_RES$mcmc.objs, Assumptions, nage, 16
+)
+lambda_data <- summarize_scenarios(lambda_results)
+lambda_plot <- make_growth_plot(lambda_data, "Lambda", 1)
+
+write.csv(
+  lambda_data,
+  file.path(output_dir, "one_year_lambda.csv"),
+  row.names = FALSE
+)
+ggsave(
+  file.path(output_dir, "one_year_lambda.pdf"),
+  plot = lambda_plot,
+  width = 6,
+  height = 3.5,
+  scale = 1
+)
+
+change_results <- ReCAP::analysisRecruitment(
+  Chicago_RES$mcmc.objs, Assumptions, nage, 16
+)
+change_data <- summarize_scenarios(change_results)
+change_plot <- make_growth_plot(change_data, "Net population change", 0)
+
+write.csv(
+  change_data,
+  file.path(output_dir, "one_year_change.csv"),
+  row.names = FALSE
+)
+ggsave(
+  file.path(output_dir, "one_year_change.pdf"),
+  plot = change_plot,
+  width = 6,
+  height = 3.5,
+  scale = 1
+)
