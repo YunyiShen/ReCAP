@@ -1,0 +1,2 @@
+"intercept","slope","harvest_rate_at_lambda_1","observed_harvest_rate_min","observed_harvest_rate_max","crossing_within_observed_range","r_squared","n_years"
+1.54454217682375,-1.63393716589873,0.333269961776183,0.182308355145339,0.661098653707745,TRUE,0.894831887639031,16

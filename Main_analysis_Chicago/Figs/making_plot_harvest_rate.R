@@ -102,10 +102,58 @@ rate_lambda_data$group <- factor(
   levels = age_display_order
 )
 
+fit_stability_threshold <- function(data) {
+  trend_model <- lm(lambda ~ harvest.rate, data = data)
+  model_coefficients <- coef(trend_model)
+  intercept <- unname(model_coefficients[["(Intercept)"]])
+  slope <- unname(model_coefficients[["harvest.rate"]])
+  threshold <- if (is.finite(slope) && abs(slope) > .Machine$double.eps) {
+    (1 - intercept) / slope
+  } else {
+    NA_real_
+  }
+  observed_min <- min(data$harvest.rate)
+  observed_max <- max(data$harvest.rate)
+
+  data.frame(
+    intercept = intercept,
+    slope = slope,
+    harvest_rate_at_lambda_1 = threshold,
+    observed_harvest_rate_min = observed_min,
+    observed_harvest_rate_max = observed_max,
+    crossing_within_observed_range = is.finite(threshold) &&
+      threshold >= observed_min && threshold <= observed_max,
+    r_squared = summary(trend_model)$r.squared,
+    n_years = nrow(data)
+  )
+}
+
+age_stability_thresholds <- do.call(
+  rbind,
+  lapply(age_display_order, function(age_group) {
+    threshold <- fit_stability_threshold(
+      rate_lambda_data[rate_lambda_data$group == age_group, ]
+    )
+    data.frame(age_group = age_group, threshold, check.names = FALSE)
+  })
+)
+write.csv(
+  age_stability_thresholds,
+  file.path(output_dir, "rate_vs_lambda_stability_thresholds.csv"),
+  row.names = FALSE
+)
+
 rate_lambda_plot <- ggplot(
   rate_lambda_data,
   aes(x = harvest.rate, y = lambda)
 ) +
+  geom_smooth(
+    method = lm,
+    formula = y ~ x,
+    se = FALSE,
+    linewidth = 0.6,
+    colour = "gray10"
+  ) +
   geom_point() +
   geom_errorbar(
     aes(ymin = lambda.low, ymax = lambda.high),
@@ -171,11 +219,24 @@ overall_lambda_data <- merge(
 )
 overall_lambda_data$Year <- factor(overall_lambda_data$Year)
 
+overall_stability_threshold <- fit_stability_threshold(overall_lambda_data)
+write.csv(
+  overall_stability_threshold,
+  file.path(output_dir, "rate_overall_vs_lambda1_stability_threshold.csv"),
+  row.names = FALSE
+)
+
 overall_lambda_plot <- ggplot(
   overall_lambda_data,
   aes(x = harvest.rate, y = lambda)
 ) +
-  geom_smooth(method = lm, linewidth = 0.5, colour = "gray10", se = TRUE) +
+  geom_smooth(
+    method = lm,
+    formula = y ~ x,
+    linewidth = 0.6,
+    colour = "gray10",
+    se = FALSE
+  ) +
   geom_point(aes(colour = Year)) +
   geom_errorbar(
     aes(ymin = lambda.low, ymax = lambda.high),
