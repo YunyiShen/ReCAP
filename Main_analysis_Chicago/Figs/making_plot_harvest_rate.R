@@ -144,7 +144,7 @@ write.csv(
 )
 
 rate_lambda_plot <- ggplot(
-  rate_lambda_data,
+  rate_lambda_data[startsWith(as.character(rate_lambda_data$group), "Female."), ],
   aes(x = harvest.rate, y = lambda)
 ) +
   geom_smooth(
@@ -167,7 +167,12 @@ rate_lambda_plot <- ggplot(
     linewidth = 0.2
   ) +
   geom_hline(yintercept = 1, colour = "gray30", linetype = 2) +
-  facet_wrap(~group, ncol = 2) +
+  facet_wrap(
+    ~group,
+    nrow = 1,
+    labeller = labeller(group = function(x) gsub(".", " ", x, fixed = TRUE))
+  ) +
+  scale_y_continuous(breaks = seq(0.4, 1.4, by = 0.2)) +
   coord_cartesian(xlim = c(0, 0.9), ylim = c(0.3, 1.5)) +
   labs(x = "Harvest rate", y = "Annual growth rate (lambda)") +
   theme_classic()
@@ -176,7 +181,7 @@ ggsave(
   file.path(output_dir, "rate_vs_lambda.pdf"),
   plot = rate_lambda_plot,
   width = 12,
-  height = 8,
+  height = 4,
   scale = 0.8
 )
 
